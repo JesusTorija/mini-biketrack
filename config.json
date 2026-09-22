@@ -1,0 +1,37 @@
+{
+  "cyclist": {
+    "weight_kg": 70.0,
+    "bike_weight_kg": 8.0,
+    "ftp_watts": 250,
+    "intensity_factor": 0.88,
+    "target_power_watts": 220,
+    "w_prime_kj": 20.0,
+    "fatigue_rate_per_1000kj": 1.5,
+    "cda_seated": 0.25,
+    "cda_standing": 0.40,
+    "rolling_resistance_cr": 0.004,
+    "drivetrain_loss_percent": 2.5
+  },
+  "environment": {
+    "air_density": 1.225,
+    "wind_speed_ms": 0.0
+  },
+  "simulation_limits": {
+    "max_descent_speed_kmh": 75.0,
+    "descent_braking_factor": 0.85,
+    "standing_speed_threshold_kmh": 15.0
+  },
+  "power_strategy": {
+    "climb_gradient_threshold": 4.0,
+    "climb_power_multiplier": 1.15,
+    "descent_gradient_threshold": -2.0,
+    "descent_power_watts": 20.0,
+    "false_flat_power_factor": 0.4
+  },
+  "inertia": {
+    "previous_speed_weight": 0.6,
+    "current_speed_weight": 0.4,
+    "previous_power_weight": 0.7,
+    "current_power_weight": 0.3
+  }
+}
