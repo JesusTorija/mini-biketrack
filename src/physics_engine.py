@@ -100,12 +100,17 @@ class CyclingPhysicsSimulator:
             if v < 0.5:
                 v = 0.5
 
+        # Aplicar factor de frenado en curvas SOLO si se desciende a alta velocidad (> 45 km/h / 12.5 m/s)
         if elevation_change_m < 0:
-            v = v * self.descent_braking_factor
+            v_kmh_temp = v * 3.6
+            if v_kmh_temp > 45.0:
+                # El factor de frenado actúa de forma más suave y acotada cerca de 1.0 (ej. 0.90 a 1.00)
+                braking_adjustment = 1.0 - ((1.0 - self.descent_braking_factor) * ((v_kmh_temp - 45.0) / 45.0))
+                v = v * max(self.descent_braking_factor, braking_adjustment)
+
             if v > self.max_descent_speed_ms:
                 v = self.max_descent_speed_ms
 
-        # Amortiguación de inercia mejorada para estabilizar la velocidad en subidas constantes
         smoothed_v = (self.inertia_prev_weight * previous_v) + (self.inertia_curr_weight * v)
         return smoothed_v
 

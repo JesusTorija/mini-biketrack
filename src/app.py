@@ -3,6 +3,7 @@ import tempfile
 import os
 import json
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -33,7 +34,7 @@ l_def = default_config.get("simulation_limits", {})
 p_def = default_config.get("power_strategy", {})
 i_def = default_config.get("inertia", {})
 
-st.title("🚴‍♂️ Mini BikeTrack - Simulador de Ruta")
+st.title("🚴‍♂️ Mini BikeTrack App - Simulador de Ruta")
 st.markdown("Sube tu archivo GPX, ajusta tus parámetros en la barra lateral y haz clic en **Simular Ruta**. *Usa el selector deslizante o haz clic en las gráficas para sincronizar la posición en el mapa y perfiles.*")
 
 # --- SUBIR ARCHIVO GPX ---
@@ -64,7 +65,8 @@ with st.sidebar.form("simulation_form"):
 
     st.subheader("4. Límites, Inercia y Calidad GPS")
     max_descent_speed = st.slider("Velocidad máx. descenso (km/h)", 30.0, 130.0, float(l_def.get("max_descent_speed_kmh", 75.0)), 5.0)
-    descent_braking = st.slider("Factor frenado en curvas", 0.30, 1.00, float(l_def.get("descent_braking_factor", 0.85)), 0.05)
+    # Escala más fina y acotada (0.90 a 1.00) para el frenado en curvas a alta velocidad
+    descent_braking = st.slider("Factor frenado en curvas rápidas", 0.90, 1.00, float(l_def.get("descent_braking_factor", 0.95)), 0.01)
     standing_threshold = st.slider("Umbral de pie en subida (km/h)", 3.0, 40.0, float(l_def.get("standing_speed_threshold_kmh", 15.0)), 1.0)
     wind_speed = st.slider("Viento (m/s) [+ contra, - favor]", -20.0, 20.0, float(e_def.get("wind_speed_ms", 0.0)), 0.5)
     smooth_distance = st.slider("Radio suavizado altitud (m)", 0.0, 300.0, 50.0, 10.0)
@@ -194,16 +196,12 @@ if uploaded_file is not None:
         )
         st.session_state["selected_km"] = selected_km
 
-        # --- MINIRESUMEN DEL KM SELECCIONADO (CON ALTITUD INCLUIDA) ---
+        # --- MINIRESUMEN DEL KM SELECCIONADO ---
         idx_closest = (df_sim['distance_accumulated_km'] - selected_km).abs().idxmin()
         row_sel = df_sim.loc[idx_closest]
 
-        # Calcular altitud exacta para este punto del segmento
         elevations = [seg['elevation_start'] for seg in segments] + [segments[-1]['elevation_end']]
         distances_alt = [0] + list(df_sim['distance_accumulated_km'])
-        
-        # Interpolar altitud actual basada en la distancia seleccionada
-        import numpy as np
         current_elevation = np.interp(selected_km, distances_alt, elevations)
 
         st.markdown(f"""
@@ -217,7 +215,6 @@ if uploaded_file is not None:
         &nbsp;&nbsp;|&nbsp;&nbsp; 🎯 FTP Efectivo: **{row_sel['effective_ftp_watts']:.1f} W**
         """)
 
-        # Encontrar coordenadas geográficas del kilómetro seleccionado
         d_cum = 0.0
         best_idx = 0
         min_diff = float('inf')
@@ -280,7 +277,6 @@ if uploaded_file is not None:
             step_sample_ele = max(1, len(df_plot_ele) // 150)
             df_plot_click_ele = df_plot_ele.iloc[::step_sample_ele].copy()
             
-            # Obtener altitudes correctamente mapeadas para los puntos de muestreo
             elevations_sampled = [np.interp(d, distances_alt, elevations) for d in df_plot_click_ele['distance_accumulated_km']]
 
             fig_elev = go.Figure()
@@ -292,7 +288,6 @@ if uploaded_file is not None:
                     name="Altitud", hoverinfo='skip'
                 )
             )
-            # Puntos de muestreo con la altitud correcta inyectada en customdata
             fig_elev.add_trace(
                 go.Scatter(
                     x=df_plot_click_ele['distance_accumulated_km'], 
