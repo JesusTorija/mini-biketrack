@@ -2,7 +2,7 @@ import math
 
 class CyclingPhysicsSimulator:
     """
-    Motor de física con inercia y fatiga aeróbica basada en kilojulios (KJ) consumidos.
+    Motor de física con inercia avanzada y fatiga aeróbica basada en kilojulios (KJ) consumidos.
     """
     def __init__(self, segments: list, config: dict):
         self.segments = segments
@@ -42,16 +42,22 @@ class CyclingPhysicsSimulator:
         self.false_flat_power_factor = strategy.get('false_flat_power_factor', 0.4)
         
         inertia = config.get('inertia', {})
-        self.inertia_prev_weight = inertia.get('previous_speed_weight', 0.6)
-        self.inertia_curr_weight = inertia.get('current_speed_weight', 0.4)
-        self.power_prev_weight = inertia.get('previous_power_weight', 0.7)
-        self.power_curr_weight = inertia.get('current_power_weight', 0.3)
+        # Aumentamos ligeramente la inercia anterior por defecto (0.75) para evitar picos de velocidad bruscos
+        self.inertia_prev_weight = inertia.get('previous_speed_weight', 0.75)
+        self.inertia_curr_weight = inertia.get('current_speed_weight', 0.25)
+        self.power_prev_weight = inertia.get('previous_power_weight', 0.8)
+        self.power_curr_weight = inertia.get('current_power_weight', 0.2)
 
         self.g = 9.81
 
     def _determine_segment_power(self, gradient_percent: float, eff_ftp: float, eff_base_power: float) -> float:
+        """
+        Estrategia de potencia ajustada para reflejar fielmente la realidad en puertos (ej. El Pilar).
+        Evita inflar los vatios de forma artificial en subidas sostenidas.
+        """
         if gradient_percent > self.climb_gradient_threshold:
-            return min(eff_ftp * 1.25, eff_base_power * self.climb_power_multiplier)
+            # Mantenemos los vatios base de forma realista sin multiplicadores agresivos
+            return min(eff_ftp * 1.1, eff_base_power)
         elif gradient_percent < self.descent_gradient_threshold:
             return self.descent_power_watts
         elif gradient_percent < 0.0:
@@ -72,7 +78,7 @@ class CyclingPhysicsSimulator:
 
         v = max(1.0, previous_v)
         
-        for _ in range(12):
+        for _ in range(10):
             v_rel = v + self.wind_speed
             v_rel_squared = v_rel * abs(v_rel)
 
@@ -91,14 +97,15 @@ class CyclingPhysicsSimulator:
                 break
 
             v += diff / (max(200.0, 3.0 * p_aero / max(v, 0.1) + self.total_mass * self.g * abs(sin_theta) + 20.0))
-            if v < 0.1:
-                v = 0.1
+            if v < 0.5:
+                v = 0.5
 
         if elevation_change_m < 0:
             v = v * self.descent_braking_factor
             if v > self.max_descent_speed_ms:
                 v = self.max_descent_speed_ms
 
+        # Amortiguación de inercia mejorada para estabilizar la velocidad en subidas constantes
         smoothed_v = (self.inertia_prev_weight * previous_v) + (self.inertia_curr_weight * v)
         return smoothed_v
 
@@ -116,7 +123,6 @@ class CyclingPhysicsSimulator:
             elev_change = seg['elevation_change_m']
             gradient = seg['gradient_percent']
 
-            # Cálculo de fatiga basado en KJ consumidos (Suelo de rendimiento en 75%)
             fatigue_factor = max(0.75, 1.0 - (total_energy_kj / 1000.0) * self.fatigue_rate_per_1000kj)
             
             current_effective_ftp = self.ftp * fatigue_factor
@@ -154,8 +160,8 @@ class CyclingPhysicsSimulator:
                 'time_seconds': time_s,
                 'w_prime_joules': self.w_prime_current,
                 'w_prime_percent': (self.w_prime_current / self.w_prime_max) * 100.0,
-                'energy_kj_accumulated': total_energy_kj,       # <-- Añadido
-                'effective_ftp_watts': current_effective_ftp    # <-- Añadido
+                'energy_kj_accumulated': total_energy_kj,
+                'effective_ftp_watts': current_effective_ftp
             })
 
         hours = int(total_time_seconds // 3600)

@@ -1,18 +1,19 @@
 import gpxpy
 import math
+import pandas as pd
 
 class GPXRouteAnalyzer:
     """
     Clase para leer y procesar archivos GPX de rutas de ciclismo,
-    extrayendo distancias, desniveles y pendientes por segmentos.
+    extrayendo distancias, desniveles y pendientes por segmentos con suavizado robusto.
     """
     def __init__(self, gpx_file_path: str, smooth_distance_m: float = 50.0):
         self.gpx_file_path = gpx_file_path
-        self.smooth_distance_m = smooth_distance_m  # Distancia en metros para la ventana de suavizado
+        self.smooth_distance_m = smooth_distance_m  
         self.points = []
         self.segments = []
         self._parse_gpx()
-        self._smooth_elevations_spatial()
+        self._smooth_elevations_robust()
         self._calculate_segments()
 
     def _parse_gpx(self):
@@ -55,50 +56,44 @@ class GPXRouteAnalyzer:
 
         return R * c
 
-    def _smooth_elevations_spatial(self):
-        """Aplica un suavizado espacial promediando las elevaciones dentro de un radio de distancia."""
+    def _smooth_elevations_robust(self):
+        """
+        Aplica un suavizado robusto y efectivo a las altitudes utilizando una ventana 
+        deslizante basada en la distancia configurada (smooth_distance_m).
+        """
         if not self.points or self.smooth_distance_m <= 0:
             return
 
         n = len(self.points)
-        elevations = [p['elevation'] for p in self.points]
-        smoothed = elevations.copy()
-
         if n < 3:
             return
 
-        for i in range(n):
-            nearby_elevations = []
-            
-            # Hacia atrás
-            dist_back = 0.0
-            j = i
-            while j >= 0 and dist_back <= self.smooth_distance_m:
-                nearby_elevations.append(elevations[j])
-                if j > 0:
-                    dist_back += self._haversine_distance(
-                        self.points[j]['latitude'], self.points[j]['longitude'],
-                        self.points[j-1]['latitude'], self.points[j-1]['longitude']
-                    )
-                j -= 1
+        # Extraer elevaciones a un DataFrame de pandas para aplicar un suavizado limpio y rápido
+        elevations = [p['elevation'] for p in self.points]
+        df_temp = pd.DataFrame({'elevation': elevations})
 
-            # Hacia adelante
-            dist_fwd = 0.0
-            j = i + 1
-            while j < n and dist_fwd <= self.smooth_distance_m:
-                nearby_elevations.append(elevations[j])
-                if j < n - 1:
-                    dist_fwd += self._haversine_distance(
-                        self.points[j]['latitude'], self.points[j]['longitude'],
-                        self.points[j+1]['latitude'], self.points[j+1]['longitude']
-                    )
-                j += 1
+        # Estimar cuántos puntos abarca aproximadamente el radio de suavizado
+        # Calculamos la distancia total media entre puntos consecutivos
+        total_dist = 0.0
+        for i in range(n - 1):
+            total_dist += self._haversine_distance(
+                self.points[i]['latitude'], self.points[i]['longitude'],
+                self.points[i+1]['latitude'], self.points[i+1]['longitude']
+            )
+        
+        avg_spacing = total_dist / max(1, n - 1)
+        # Ventana de puntos basada en los metros solicitados (mínimo 3 puntos)
+        window_size = max(3, int(self.smooth_distance_m / max(0.5, avg_spacing)))
+        # Asegurar que la ventana sea impar para mantener simetría
+        if window_size % 2 == 0:
+            window_size += 1
 
-            if nearby_elevations:
-                smoothed[i] = sum(nearby_elevations) / len(nearby_elevations)
-
+        # Aplicar media móvil centrada para eliminar picos de GPS sin retrasar la altitud
+        smoothed_series = df_temp['elevation'].rolling(window=window_size, center=True, min_periods=1).mean()
+        
+        # Asignar de vuelta las altitudes suavizadas
         for i, p in enumerate(self.points):
-            p['elevation'] = smoothed[i]
+            p['elevation'] = float(smoothed_series.iloc[i])
 
     def _calculate_segments(self):
         """Genera los segmentos de la ruta calculando distancias, desniveles y pendientes."""
@@ -115,6 +110,9 @@ class GPXRouteAnalyzer:
                 gradient = (elev_change / dist_horizontal) * 100.0
             else:
                 gradient = 0.0
+
+            # Límite físico de seguridad para descartar cualquier micro-ruido remanente (>30% o <-30%)
+            gradient = max(-30.0, min(30.0, gradient))
 
             self.segments.append({
                 'start_point': p1,
@@ -178,7 +176,7 @@ class GPXRouteAnalyzer:
             'total_distance_km': total_distance,
             'elevation_gain_m': elevation_gain,
             'elevation_loss_m': elevation_loss,
-            'num_points': len(self.points),       
+            'num_points': len(self.points),      
             'total_points': len(self.points)    
         }
 

@@ -116,10 +116,10 @@ if uploaded_file is not None:
                     "false_flat_power_factor": 0.4
                 },
                 "inertia": {
-                    "previous_speed_weight": i_def.get("previous_speed_weight", 0.6),
-                    "current_speed_weight": i_def.get("current_speed_weight", 0.4),
-                    "previous_power_weight": i_def.get("previous_power_weight", 0.7),
-                    "current_power_weight": i_def.get("current_power_weight", 0.3)
+                    "previous_speed_weight": i_def.get("previous_speed_weight", 0.75),
+                    "current_speed_weight": i_def.get("current_speed_weight", 0.25),
+                    "previous_power_weight": i_def.get("previous_power_weight", 0.8),
+                    "current_power_weight": i_def.get("current_power_weight", 0.2)
                 }
             }
 
@@ -168,11 +168,10 @@ if uploaded_file is not None:
 
         df_sim['time_formatted'] = df_sim['time_accumulated_sec'].apply(sec_to_str)
 
-        # Cálculo de métricas adicionales ampliadas
         avg_power = df_sim['power_watts'].mean()
         total_kj = df_sim['energy_kj_accumulated'].iloc[-1] if 'energy_kj_accumulated' in df_sim else 0.0
 
-        # --- PANEL DE MÉTRICAS RESUMEN AMPLIADO ---
+        # --- PANEL DE MÉTRICAS RESUMEN GENERAL ---
         m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
         m_col1.metric("⏱️ Tiempo", result['formatted_time'])
         m_col2.metric("📏 Distancia", f"{summary['total_distance_km']:.2f} km")
@@ -194,6 +193,29 @@ if uploaded_file is not None:
             0.1
         )
         st.session_state["selected_km"] = selected_km
+
+        # --- MINIRESUMEN DEL KM SELECCIONADO (CON ALTITUD INCLUIDA) ---
+        idx_closest = (df_sim['distance_accumulated_km'] - selected_km).abs().idxmin()
+        row_sel = df_sim.loc[idx_closest]
+
+        # Calcular altitud exacta para este punto del segmento
+        elevations = [seg['elevation_start'] for seg in segments] + [segments[-1]['elevation_end']]
+        distances_alt = [0] + list(df_sim['distance_accumulated_km'])
+        
+        # Interpolar altitud actual basada en la distancia seleccionada
+        import numpy as np
+        current_elevation = np.interp(selected_km, distances_alt, elevations)
+
+        st.markdown(f"""
+        📌 **Detalle en el KM {selected_km:.2f}**: 
+        &nbsp;&nbsp;|&nbsp;&nbsp; 🏔️ Altitud: **{current_elevation:.1f} m**
+        &nbsp;&nbsp;|&nbsp;&nbsp; ⏱️ Tiempo: **{row_sel['time_formatted']}** 
+        &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ Potencia: **{row_sel['power_watts']:.1f} W** 
+        &nbsp;&nbsp;|&nbsp;&nbsp; 🚀 Velocidad: **{row_sel['speed_kmh']:.1f} km/h** 
+        &nbsp;&nbsp;|&nbsp;&nbsp; 🔋 Energía: **{row_sel['energy_kj_accumulated']:.1f} kJ** 
+        &nbsp;&nbsp;|&nbsp;&nbsp; 📈 Pendiente: **{row_sel['gradient_percent']:.1f}%**
+        &nbsp;&nbsp;|&nbsp;&nbsp; 🎯 FTP Efectivo: **{row_sel['effective_ftp_watts']:.1f} W**
+        """)
 
         # Encontrar coordenadas geográficas del kilómetro seleccionado
         d_cum = 0.0
@@ -253,14 +275,13 @@ if uploaded_file is not None:
 
         with top_col2:
             st.subheader("📈 Perfil de Elevación")
-            elevations = [seg['elevation_start'] for seg in segments] + [segments[-1]['elevation_end']]
-            distances_alt = [0] + list(df_sim['distance_accumulated_km'])
-            times_alt_formatted = ["00:00"] + list(df_sim['time_formatted'])
-            gradients_alt = [0.0] + list(df_sim['gradient_percent'])
-
+            
             df_plot_ele = df_sim.copy()
             step_sample_ele = max(1, len(df_plot_ele) // 150)
             df_plot_click_ele = df_plot_ele.iloc[::step_sample_ele].copy()
+            
+            # Obtener altitudes correctamente mapeadas para los puntos de muestreo
+            elevations_sampled = [np.interp(d, distances_alt, elevations) for d in df_plot_click_ele['distance_accumulated_km']]
 
             fig_elev = go.Figure()
             fig_elev.add_trace(
@@ -271,13 +292,19 @@ if uploaded_file is not None:
                     name="Altitud", hoverinfo='skip'
                 )
             )
+            # Puntos de muestreo con la altitud correcta inyectada en customdata
             fig_elev.add_trace(
                 go.Scatter(
                     x=df_plot_click_ele['distance_accumulated_km'], 
-                    y=[elevations[int(i * len(elevations)/len(df_sim))] for i in range(len(df_plot_click_ele))],
+                    y=elevations_sampled,
                     mode='markers', marker=dict(size=8, color='rgba(0,0,0,0)'),
                     showlegend=False,
-                    hovertemplate="<b>Distancia:</b> %{x:.2f} km<br><b>Altitud:</b> %{y:.1f} m<extra></extra>"
+                    hovertemplate=(
+                        "<b>Distancia:</b> %{x:.2f} km<br>"
+                        "<b>Altitud:</b> %{customdata[0]:.1f} m<br>"
+                        "<b>Pendiente:</b> %{customdata[1]:.1f}%<extra></extra>"
+                    ),
+                    customdata=list(zip(elevations_sampled, df_plot_click_ele['gradient_percent']))
                 )
             )
             fig_elev.add_vline(x=selected_km, line_width=2.5, line_dash="dash", line_color="#00FFFF")
@@ -298,7 +325,6 @@ if uploaded_file is not None:
         st.divider()
         st.subheader("📉 Panorámica de Rendimiento y Fatiga")
 
-        # Aplicar el suavizado visual (rolling window) para las gráficas inferiores
         df_plot = df_sim.copy()
         if len(df_plot) > 300:
             window_size = max(5, len(df_plot) // 100)
@@ -306,11 +332,12 @@ if uploaded_file is not None:
             df_plot['speed_kmh'] = df_plot['speed_kmh'].rolling(window=window_size, min_periods=1).mean()
             df_plot['w_prime_percent'] = df_plot['w_prime_percent'].rolling(window=window_size, min_periods=1).mean()
             df_plot['effective_ftp_watts'] = df_plot['effective_ftp_watts'].rolling(window=window_size, min_periods=1).mean()
+            df_plot['energy_kj_accumulated'] = df_plot['energy_kj_accumulated'].rolling(window=window_size, min_periods=1).mean()
 
         step_sample = max(1, len(df_plot) // 150)
         df_plot_click = df_plot.iloc[::step_sample].copy()
 
-        # GRÁFICA 1: Dinámica (Potencia, Velocidad, W')
+        # GRÁFICA 1: Dinámica (Potencia, Velocidad)
         fig_combined = make_subplots(specs=[[{"secondary_y": True}]])
         fig_combined.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['power_watts'], name="Potencia (W)", line=dict(color='orange', width=2), hoverinfo='skip'), secondary_y=False)
         fig_combined.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['speed_kmh'], name="Velocidad (km/h)", line=dict(color='deepskyblue', width=2), hoverinfo='skip'), secondary_y=True)
@@ -320,8 +347,13 @@ if uploaded_file is not None:
                 x=df_plot_click['distance_accumulated_km'], y=df_plot_click['power_watts'],
                 mode='markers', marker=dict(size=8, color='rgba(0,0,0,0)'),
                 name="Puntos clic", showlegend=False,
-                hovertemplate="Distancia: %{x:.2f} km<br>Potencia: %{y:.1f} W<br>Tiempo: %{customdata}<extra></extra>",
-                customdata=df_plot_click['time_formatted']
+                hovertemplate=(
+                    "Distancia: %{x:.2f} km<br>"
+                    "Potencia: %{y:.1f} W<br>"
+                    "Velocidad: %{customdata[0]:.1f} km/h<br>"
+                    "Tiempo: %{customdata[1]}<extra></extra>"
+                ),
+                customdata=list(zip(df_plot_click['speed_kmh'], df_plot_click['time_formatted']))
             ),
             secondary_y=False
         )
@@ -343,14 +375,19 @@ if uploaded_file is not None:
         # GRÁFICA 2: Fatiga y Energía
         fig_fatigue = make_subplots(specs=[[{"secondary_y": True}]])
         fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['effective_ftp_watts'], name="FTP Efectivo (W)", line=dict(color='purple', width=2), hoverinfo='skip'), secondary_y=False)
-        fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_sim['energy_kj_accumulated'], name="Energía / Trabajo (kJ)", line=dict(color='forestgreen', width=2, dash='dot'), hoverinfo='skip'), secondary_y=True)
+        fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['energy_kj_accumulated'], name="Energía / Trabajo (kJ)", line=dict(color='forestgreen', width=2, dash='dot'), hoverinfo='skip'), secondary_y=True)
         
         fig_fatigue.add_trace(
             go.Scatter(
                 x=df_plot_click['distance_accumulated_km'], y=df_plot_click['effective_ftp_watts'],
                 mode='markers', marker=dict(size=8, color='rgba(0,0,0,0)'),
                 showlegend=False, 
-                hovertemplate="Distancia: %{x:.2f} km<br>FTP Efectivo: %{y:.1f} W<extra></extra>"
+                hovertemplate=(
+                    "Distancia: %{x:.2f} km<br>"
+                    "FTP Efectivo: %{y:.1f} W<br>"
+                    "Energía Consumida: %{customdata:.1f} kJ<extra></extra>"
+                ),
+                customdata=df_plot_click['energy_kj_accumulated']
             ),
             secondary_y=False
         )
