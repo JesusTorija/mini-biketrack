@@ -11,7 +11,7 @@ from physics_engine import CyclingPhysicsSimulator
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
-    page_title="Mini BestBikeSplit App",
+    page_title="Mini BikeTrack App",
     page_icon="🚴‍♂️",
     layout="wide"
 )
@@ -33,7 +33,7 @@ l_def = default_config.get("simulation_limits", {})
 p_def = default_config.get("power_strategy", {})
 i_def = default_config.get("inertia", {})
 
-st.title("🚴‍♂️ Mini BestBikeSplit - Simulador de Ruta")
+st.title("🚴‍♂️ Mini BikeTrack - Simulador de Ruta")
 st.markdown("Sube tu archivo GPX, ajusta tus parámetros en la barra lateral y haz clic en **Simular Ruta**. *Usa el selector deslizante o haz clic en las gráficas para sincronizar la posición en el mapa y perfiles.*")
 
 # --- SUBIR ARCHIVO GPX ---
