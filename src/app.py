@@ -65,7 +65,6 @@ with st.sidebar.form("simulation_form"):
 
     st.subheader("4. Límites, Inercia y Calidad GPS")
     max_descent_speed = st.slider("Velocidad máx. descenso (km/h)", 30.0, 130.0, float(l_def.get("max_descent_speed_kmh", 75.0)), 5.0)
-    # Escala más fina y acotada (0.90 a 1.00) para el frenado en curvas a alta velocidad
     descent_braking = st.slider("Factor frenado en curvas rápidas", 0.90, 1.00, float(l_def.get("descent_braking_factor", 0.95)), 0.01)
     standing_threshold = st.slider("Umbral de pie en subida (km/h)", 3.0, 40.0, float(l_def.get("standing_speed_threshold_kmh", 15.0)), 1.0)
     wind_speed = st.slider("Viento (m/s) [+ contra, - favor]", -20.0, 20.0, float(e_def.get("wind_speed_ms", 0.0)), 0.5)
@@ -211,6 +210,7 @@ if uploaded_file is not None:
         &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ Potencia: **{row_sel['power_watts']:.1f} W** 
         &nbsp;&nbsp;|&nbsp;&nbsp; 🚀 Velocidad: **{row_sel['speed_kmh']:.1f} km/h** 
         &nbsp;&nbsp;|&nbsp;&nbsp; 🔋 Energía: **{row_sel['energy_kj_accumulated']:.1f} kJ** 
+        &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ W': **{row_sel['w_prime_percent']:.1f}%**
         &nbsp;&nbsp;|&nbsp;&nbsp; 📈 Pendiente: **{row_sel['gradient_percent']:.1f}%**
         &nbsp;&nbsp;|&nbsp;&nbsp; 🎯 FTP Efectivo: **{row_sel['effective_ftp_watts']:.1f} W**
         """)
@@ -332,7 +332,7 @@ if uploaded_file is not None:
         step_sample = max(1, len(df_plot) // 150)
         df_plot_click = df_plot.iloc[::step_sample].copy()
 
-        # GRÁFICA 1: Dinámica (Potencia, Velocidad)
+        # GRÁFICA 1: Dinámica (Potencia y Velocidad - Limpia de W')
         fig_combined = make_subplots(specs=[[{"secondary_y": True}]])
         fig_combined.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['power_watts'], name="Potencia (W)", line=dict(color='orange', width=2), hoverinfo='skip'), secondary_y=False)
         fig_combined.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['speed_kmh'], name="Velocidad (km/h)", line=dict(color='deepskyblue', width=2), hoverinfo='skip'), secondary_y=True)
@@ -355,7 +355,7 @@ if uploaded_file is not None:
         fig_combined.add_vline(x=selected_km, line_width=2.5, line_dash="dash", line_color="#00FFFF")
 
         fig_combined.update_layout(
-            title="Dinámica de Ruta: Potencia, Velocidad y W'",
+            title="Dinámica de Ruta: Potencia y Velocidad",
             hovermode="x unified",
             xaxis_title="Distancia Acumulada (km)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -367,10 +367,11 @@ if uploaded_file is not None:
         
         event_combined = st.plotly_chart(fig_combined, width='stretch', on_select="rerun", key="chart_combined")
 
-        # GRÁFICA 2: Fatiga y Energía
+        # GRÁFICA 2: Fatiga, Energía y W' (Con W' integrada aquí)
         fig_fatigue = make_subplots(specs=[[{"secondary_y": True}]])
         fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['effective_ftp_watts'], name="FTP Efectivo (W)", line=dict(color='purple', width=2), hoverinfo='skip'), secondary_y=False)
-        fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['energy_kj_accumulated'], name="Energía / Trabajo (kJ)", line=dict(color='forestgreen', width=2, dash='dot'), hoverinfo='skip'), secondary_y=True)
+        fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['w_prime_percent'], name="W' Disponible (%)", line=dict(color='limegreen', width=2), hoverinfo='skip'), secondary_y=False)
+        fig_fatigue.add_trace(go.Scatter(x=df_plot['distance_accumulated_km'], y=df_plot['energy_kj_accumulated'], name="Energía / Trabajo (kJ)", line=dict(color='gold', width=2, dash='dot'), hoverinfo='skip'), secondary_y=True)
         
         fig_fatigue.add_trace(
             go.Scatter(
@@ -380,23 +381,24 @@ if uploaded_file is not None:
                 hovertemplate=(
                     "Distancia: %{x:.2f} km<br>"
                     "FTP Efectivo: %{y:.1f} W<br>"
-                    "Energía Consumida: %{customdata:.1f} kJ<extra></extra>"
+                    "W' Restante: %{customdata[0]:.1f}%<br>"
+                    "Energía Consumida: %{customdata[1]:.1f} kJ<extra></extra>"
                 ),
-                customdata=df_plot_click['energy_kj_accumulated']
+                customdata=list(zip(df_plot_click['w_prime_percent'], df_plot_click['energy_kj_accumulated']))
             ),
             secondary_y=False
         )
         fig_fatigue.add_vline(x=selected_km, line_width=2.5, line_dash="dash", line_color="#00FFFF")
 
         fig_fatigue.update_layout(
-            title="Evolución de la Fatiga: FTP Efectivo y Energía Consumida",
+            title="Evolución de la Fatiga: FTP Efectivo, W' y Energía Consumida",
             hovermode="x unified",
             xaxis_title="Distancia Acumulada (km)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(l=20, r=20, t=40, b=20),
             clickmode="event+select"
         )
-        fig_fatigue.update_yaxes(title_text="<b>FTP Efectivo (W)</b>", secondary_y=False)
+        fig_fatigue.update_yaxes(title_text="<b>FTP y W' (%)</b>", secondary_y=False)
         fig_fatigue.update_yaxes(title_text="<b>Energía (kJ)</b>", secondary_y=True)
         
         event_fatigue = st.plotly_chart(fig_fatigue, width='stretch', on_select="rerun", key="chart_fatigue")
