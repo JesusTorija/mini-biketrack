@@ -5,7 +5,7 @@
     "ftp_watts": 195,
     "intensity_factor": 0.88,
     "target_power_watts": 220,
-    "w_prime_kj": 20.0,
+    "w_prime_kj": 14.6,
     "fatigue_rate_per_1000kj": 5,
     "cda_seated": 0.4,
     "cda_standing": 0.6,
