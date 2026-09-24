@@ -98,7 +98,7 @@ if uploaded_file is not None:
                     "rolling_resistance_cr": rolling_resistance,
                     "drivetrain_loss_percent": 2.5,
                     "w_prime_kj": w_prime_kj,
-                    "fatigue_rate_per_1000kj": fatigue_rate_per_1000kj
+                    "fatigue_rate_per_1000kj": fatigue_per_1000kj
                 },
                 "environment": {
                     "air_density": 1.225,
