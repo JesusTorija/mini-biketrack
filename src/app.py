@@ -98,7 +98,7 @@ if uploaded_file is not None:
                     "rolling_resistance_cr": rolling_resistance,
                     "drivetrain_loss_percent": 2.5,
                     "w_prime_kj": w_prime_kj,
-                    "fatigue_rate_per_1000kj": fatigue_per_1000kj
+                    "fatigue_rate_per_1000kj": fatigue_rate_per_1000kj
                 },
                 "environment": {
                     "air_density": 1.225,
@@ -172,23 +172,34 @@ if uploaded_file is not None:
         avg_power = df_sim['power_watts'].mean()
         total_kj = df_sim['energy_kj_accumulated'].iloc[-1] if 'energy_kj_accumulated' in df_sim else 0.0
 
-        # --- PANEL DE MÉTRICAS RESUMEN GENERAL (7 KPIs) ---
-        m_col1, m_col2, m_col3, m_col4, m_col5, m_col6, m_col7 = st.columns(7)
-        m_col1.metric("⏱️ Tiempo", result['formatted_time'])
-        m_col2.metric("📏 Distancia", f"{summary['total_distance_km']:.2f} km")
-        m_col3.metric("🚀 Vel. Media", f"{result['average_speed_kmh']:.2f} km/h")
-        m_col4.metric("⚡ Potencia Media", f"{avg_power:.0f} W")
-        m_col5.metric("🔋 Energía", f"{total_kj:.0f} kJ")
-        
+        # --- CÁLCULO DE POTENCIA NORMALIZADA (NP) Y TSS (SCIENCE TO SPORT) ---
         total_seconds = result['total_time_seconds']
-        if ftp_watts > 0 and total_seconds > 0:
-            intensity_factor_actual = avg_power / ftp_watts
-            tss_est = (total_seconds * avg_power * intensity_factor_actual) / (ftp_watts * 3600.0) * 100.0
+        if len(df_sim) > 0 and total_seconds > 0:
+            window_np = max(1, len(df_sim) // 30)
+            rolling_power = df_sim['power_watts'].rolling(window=window_np, min_periods=1).mean()
+            np_watts = (rolling_power ** 4).mean() ** 0.25
         else:
-            tss_est = 0.0
+            np_watts = avg_power
 
-        m_col6.metric("🔥 Carga (TSS)", f"{tss_est:.0f}")
-        m_col7.metric("📈 Desnivel", f"{summary['elevation_gain_m']:.1f} m")
+        if ftp_watts > 0 and total_seconds > 0:
+            intensity_factor_science = np_watts / ftp_watts
+            tss_science = (total_seconds * np_watts * intensity_factor_science) / (ftp_watts * 3600.0) * 100.0
+        else:
+            intensity_factor_science = 0.0
+            tss_science = 0.0
+
+        # --- PANEL DE MÉTRICAS RESUMEN EN DOS FILAS (8 KPIs) ---
+        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns(4)
+        row1_col1.metric("⏱️ Tiempo", result['formatted_time'])
+        row1_col2.metric("📏 Distancia", f"{summary['total_distance_km']:.2f} km")
+        row1_col3.metric("🚀 Vel. Media", f"{result['average_speed_kmh']:.2f} km/h")
+        row1_col4.metric("📈 Desnivel", f"{summary['elevation_gain_m']:.1f} m")
+
+        row2_col1, row2_col2, row2_col3, row2_col4 = st.columns(4)
+        row2_col1.metric("⚡ Potencia Media", f"{avg_power:.0f} W")
+        row2_col2.metric("🔥 Potencia Normalizada (NP)", f"{np_watts:.0f} W")
+        row2_col3.metric("🔋 Energía Total", f"{total_kj:.0f} kJ")
+        row2_col4.metric("⚡ Carga (TSS)", f"{tss_science:.0f}")
 
         max_dist_km = float(summary['total_distance_km'])
         
@@ -390,7 +401,7 @@ if uploaded_file is not None:
                 hovertemplate=(
                     "Distancia: %{x:.2f} km<br>"
                     "FTP Efectivo: %{y:.1f} W<br>"
-                    "Energía Consumida: %{customdata:.1f} kJ<extra></extra>"
+                    "Energía Consumida: %{customdata[0]:.1f} kJ<extra></extra>"
                 ),
                 customdata=df_plot_click['energy_kj_accumulated']
             ),
