@@ -9,13 +9,7 @@ from plotly.subplots import make_subplots
 
 from gpx_parser import GPXRouteAnalyzer
 from physics_engine import CyclingPhysicsSimulator
-
-# --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(
-    page_title="Mini BikeTrack App",
-    page_icon="🚴‍♂️",
-    layout="wide"
-)
+from firebase_auth import init_firebase_auth, render_auth_sidebar
 
 # --- CARGAR CONFIGURACIÓN DESDE JSON ---
 config_path = "config.json"
@@ -28,17 +22,46 @@ if os.path.exists(config_path):
 else:
     default_config = {}
 
+# Nombre centralizado y fácil de modificar en el futuro
+APP_TITLE = default_config.get("app_name", "Mini BikeTrack App")
+
+# --- CONFIGURACIÓN DE LA PÁGINA ---
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon="🚴‍♂️",
+    layout="wide"
+)
+
+# Inicializar estado de autenticación
+init_firebase_auth()
+
+# --- GESTIÓN DE COOKIES Y CONSENTIMIENTO RGPD (SESSION STATE) ---
+if "cookies_accepted" not in st.session_state:
+    st.session_state["cookies_accepted"] = False
+
+if not st.session_state["cookies_accepted"]:
+    st.warning("🍪 **Aviso de Privacidad y Cookies**: Este sitio web utiliza cookies técnicas y de análisis para mejorar la experiencia de usuario y mostrar publicidad personalizada (Google AdSense). Al continuar navegando, aceptas nuestra política de uso de cookies.")
+    col_c1, col_c2, _ = st.columns([1, 1, 4])
+    if col_c1.button("✅ Aceptar todas"):
+        st.session_state["cookies_accepted"] = True
+        st.rerun()
+    if col_c2.button("❌ Configurar / Rechazar"):
+        st.info("Puedes cerrar la aplicación si no estás de acuerdo con el uso de cookies básicas.")
+
 c_def = default_config.get("cyclist", {})
 e_def = default_config.get("environment", {})
 l_def = default_config.get("simulation_limits", {})
 p_def = default_config.get("power_strategy", {})
 i_def = default_config.get("inertia", {})
 
-st.title("🚴‍♂️ Mini BikeTrack App - Simulador de Ruta")
+st.title(f"🚴‍♂️ {APP_TITLE} - Simulador de Ruta")
 st.markdown("Sube tu archivo GPX, ajusta tus parámetros en la barra lateral y haz clic en **Simular Ruta**. *Usa el selector deslizante o haz clic en las gráficas para sincronizar la posición en el mapa y perfiles.*")
 
 # --- SUBIR ARCHIVO GPX ---
 uploaded_file = st.file_uploader("Sube tu archivo de ruta (.gpx)", type=["gpx"])
+
+# --- RENDERIZAR LOGIN EN LA BARRA LATERAL ---
+render_auth_sidebar()
 
 # --- BARRA LATERAL: FORMULARIO DE CONFIGURACIÓN ---
 with st.sidebar.form("simulation_form"):
@@ -472,3 +495,12 @@ if uploaded_file is not None:
 
 else:
     st.info("👈 Sube un archivo GPX y pulsa **Simular Ruta** en la barra lateral para empezar.")
+
+# --- PIE DE PÁGINA / POLÍTICA DE PRIVACIDAD ---
+st.markdown("---")
+with st.expander(f"📄 Política de Privacidad, Aviso Legal y Cookies - {APP_TITLE}"):
+    st.markdown(f"""
+    * **Uso de Datos**: {APP_TITLE} procesa los archivos GPX localmente en la sesión de usuario para la simulación física. Ningún archivo personal o ruta es almacenado de forma permanente en servidores externos sin el consentimiento del usuario autenticado.
+    * **Cookies y Publicidad**: Utilizamos cookies técnicas necesarias para el funcionamiento de la aplicación, así como cookies de terceros (como Google AdSense) para la medición de tráfico y la personalización de anuncios. Puede gestionar sus preferencias desde la configuración de su navegador.
+    * **Contacto**: Para cualquier duda sobre el servicio o los datos, puede contactar a través del repositorio del proyecto.
+    """)

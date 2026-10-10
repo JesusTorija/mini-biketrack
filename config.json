@@ -1,4 +1,5 @@
 {
+  "app_name": "Mini BikeTrack App",
   "cyclist": {
     "weight_kg": 58.0,
     "bike_weight_kg": 7.5,
