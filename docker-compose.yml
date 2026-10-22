@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
 
-web:
+  web:
     build: .
     container_name: hors_cathedrale_web
     restart: always
@@ -20,7 +20,7 @@ web:
     volumes:
       - .:/app
     ports:
-      - "80:8000"   # <--- Cambiado de "8000:8000" a "80:8000"
+      - "80:8000"
     environment:
       - DATABASE_URL=postgresql://hors_user:tu_password_segura@db:5432/hors_categorie_db
     depends_on:
