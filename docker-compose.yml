@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: tu_password_segura
       POSTGRES_DB: hors_categorie_db
     volumes:
-      data:/var/lib/postgresql/data
+      - data:/var/lib/postgresql/data   # <--- Añadido el guion aquí
     ports:
       - "5432:5432"
 
