@@ -205,6 +205,7 @@ button[type="submit"], #btn-simulate {
     cursor: pointer;
     box-shadow: 4px 4px 0px #121212;
     transition: all 0.1s ease;
+    margin-bottom: 0.8rem;
 }
 
 button[type="submit"]:hover, #btn-simulate:hover {

@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    loadExampleTracks();
 });
 
 async function loadInitialConfig() {
@@ -837,3 +839,48 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
         tbody.appendChild(row);
     });
 }
+
+async function loadExampleTracks() {
+    try {
+        const response = await fetch('/api/v1/examples');
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        const select = document.getElementById('example-select');
+        if (data.examples && data.examples.length > 0) {
+            data.examples.forEach(filename => {
+                const option = document.createElement('option');
+                option.value = filename;
+                // Formatear el nombre para que se vea bonito (ej: "alpes.gpx" -> "Alpes")
+                option.textContent = filename.replace(/\.[^/.]+$/, "").toUpperCase();
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.warn("No se pudieron cargar las rutas de ejemplo", e);
+    }
+}
+
+// Evento para cargar el archivo de ejemplo seleccionado
+document.getElementById('btn-load-example').addEventListener('click', async () => {
+    const select = document.getElementById('example-select');
+    const filename = select.value;
+    if (!filename) return alert("Por favor, selecciona una ruta de ejemplo.");
+
+    try {
+        const response = await fetch(`/tracks/${filename}`);
+        if (!response.ok) throw new Error("No se pudo descargar el archivo de ejemplo.");
+        
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: filename.endsWith('.fit') ? application/octet-stream : "application/gpx+xml" });
+
+        // Inyectar el archivo obtenido en el input de tipo file del formulario
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('route-file').files = dataTransfer.files;
+
+        alert(`¡Ruta '${filename}' cargada con éxito! Pulsa en 'Simular Ruta' para ver los resultados.`);
+    } catch (err) {
+        alert(`Error: ${err.message}`);
+    }
+});

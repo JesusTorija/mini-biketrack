@@ -34,6 +34,16 @@
                         <input type="file" id="route-file" accept=".fit,.gpx" required>
                     </div>
 
+                    <div class="example-route-container" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <label for="example-select" style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">¿Sin archivo? Prueba un ejemplo:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="example-select" style="flex: 1; padding: 6px; font-size: 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                <option value="">-- Selecciona ruta de ejemplo --</option>
+                            </select>
+                            <button type="button" id="btn-load-example" style="padding: 6px 12px; font-size: 12px; background: #1d3557; color: white; border: none; border-radius: 4px; cursor: pointer;">Cargar</button>
+                        </div>
+                    </div>
+
                     <button type="submit" id="btn-simulate">Simular Ruta</button>
 
                     <fieldset>

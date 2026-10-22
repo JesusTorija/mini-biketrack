@@ -218,3 +218,17 @@ async def serve_index():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content=f"<h1>Error: No se encontró el archivo en {index_path}</h1>", status_code=404)
+
+# Definir la ruta de la carpeta tracks (en la raíz del proyecto)
+tracks_dir = os.path.join(base_dir, "..", "tracks")
+
+if os.path.exists(tracks_dir):
+    app.mount("/tracks", StaticFiles(directory=tracks_dir), name="tracks")
+
+@app.get("/api/v1/examples")
+def list_examples():
+    """Devuelve la lista de archivos de ejemplo disponibles en la carpeta tracks."""
+    if os.path.exists(tracks_dir):
+        files = [f for f in os.listdir(tracks_dir) if f.lower().endswith(('.gpx', '.fit'))]
+        return {"examples": files}
+    return {"examples": []}
