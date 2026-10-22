@@ -12,6 +12,5 @@ __pycache__/
 .streamlit/
 
 # Configuraciones y credenciales locales
-config.json
 .env
 comandos_utiles.txt

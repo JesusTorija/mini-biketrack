@@ -120,6 +120,22 @@ document.getElementById('sim-form').addEventListener('submit', async (e) => {
         if (!response.ok) throw new Error(await response.text());
         
         simulationDataCache = await response.json();
+
+        // Procesar y categorizar los puertos según el desnivel
+        if (simulationDataCache.simulation && simulationDataCache.simulation.detected_climbs) {
+            simulationDataCache.simulation.detected_climbs = simulationDataCache.simulation.detected_climbs.map(climb => {
+                let cat = climb.type;
+                if (climb.type === "Puerto") {
+                    const gain = climb.elevation_gain_m || 0;
+                    if (gain <= 300) cat = "Puerto 3ª";
+                    else if (gain <= 600) cat = "Puerto 2ª";
+                    else if (gain <= 1000) cat = "Puerto 1ª";
+                    else cat = "Hors Catégorie";
+                }
+                return { ...climb, display_type: cat };
+            });
+        }
+
         renderDashboard(simulationDataCache);
         renderClimbsSummaryTable(simulationDataCache.simulation, simulationDataCache.telemetry_records);
     } catch (err) {
@@ -322,6 +338,7 @@ function plotMap(points, segments, climbs) {
         climbs.forEach(climb => {
             const isPuerto = climb.type === "Puerto";
             const color = isPuerto ? "#e63946" : "#ffb703";
+            const displayType = climb.display_type || climb.type;
             
             const climbLons = [], climbLats = [], climbElevs = [], climbDists = [], climbGrads = [];
             let runningDist = 0;
@@ -346,8 +363,8 @@ function plotMap(points, segments, climbs) {
                     customdata: climbDists.map((d, i) => [d, climbElevs[i], climbGrads[i]]),
                     mode: 'lines',
                     line: { width: 5, color: color },
-                    name: climb.type,
-                    hovertemplate: `<b>${climb.type}</b><br><b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>`
+                    name: displayType,
+                    hovertemplate: `<b>${displayType}</b><br><b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>`
                 });
             }
         });
@@ -381,14 +398,19 @@ function plotMap(points, segments, climbs) {
 
 function plotElevation(segments, summary, climbs) {
     let distAcc = 0;
-    const distances = [0], elevations = [0], gradients = [segments.length > 0 ? segments[0].gradient_percent : 0];
+    const distances = [0], gradients = [segments.length > 0 ? segments[0].gradient_percent : 0];
 
-    let currentElevation = 0;
+    // Construir el perfil general usando la altitud absoluta real desde origen
+    const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
+    if (segments.length > 0 && segments[0].absolute_elevation_m !== undefined) {
+        elevations.unshift(segments[0].absolute_elevation_m - segments[0].elevation_change_m);
+    } else {
+        elevations.unshift(0);
+    }
+
     segments.forEach(s => {
         distAcc += s.distance_m / 1000;
         distances.push(distAcc);
-        currentElevation += (s.elevation_change_m || 0);
-        elevations.push(currentElevation);
         gradients.push(s.gradient_percent || 0);
     });
 
@@ -407,37 +429,50 @@ function plotElevation(segments, summary, climbs) {
     const annotations = [];
     let pCount = 1, rCount = 1;
 
+    const repechoX = [], repechoY = [], repechoCustom = [];
+    const puertoX = [], puertoY = [], puertoCustom = [];
+
     if (climbs && climbs.length > 0) {
         climbs.forEach(climb => {
             const isPuerto = climb.type === "Puerto";
             const color = isPuerto ? "#e63946" : "#b5830d";
             const labelId = isPuerto ? `P${pCount++}` : `R${rCount++}`;
             const lengthKm = (climb.distance_m / 1000).toFixed(1);
+            const displayType = climb.display_type || climb.type;
 
-            const subDistances = [], subElevs = [];
-            let runningDist = 0, runningElev = 0;
+            const subDistances = [], subElevs = [], climbCustomData = [];
+            let runningDist = 0;
 
             segments.forEach((s) => {
                 const segDist = s.distance_m / 1000;
                 const prevDist = runningDist;
                 runningDist += segDist;
-                runningElev += (s.elevation_change_m || 0);
+                
+                // Usar la altitud absoluta real del segmento en lugar de acumular desde 0
+                const segElev = s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0;
 
                 if (runningDist >= climb.start_dist_km && prevDist <= climb.end_dist_km) {
                     subDistances.push(runningDist);
-                    subElevs.push(runningElev);
+                    subElevs.push(segElev);
+                    climbCustomData.push([
+                        labelId,
+                        displayType,
+                        lengthKm,
+                        climb.elevation_gain_m.toFixed(0),
+                        climb.average_slope_percent.toFixed(1)
+                    ]);
                 }
             });
 
             if (subDistances.length > 1) {
-                traces.push({
-                    x: subDistances,
-                    y: subElevs,
-                    mode: 'lines',
-                    line: { color: color, width: 5 },
-                    name: `[${labelId}] ${climb.type} (${lengthKm} km)`,
-                    hoverinfo: 'skip'
-                });
+                const targetX = isPuerto ? puertoX : repechoX;
+                const targetY = isPuerto ? puertoY : repechoY;
+                const targetCustom = isPuerto ? puertoCustom : repechoCustom;
+
+                targetX.push(...subDistances, null);
+                targetY.push(...subElevs, null);
+                climbCustomData.forEach(cd => targetCustom.push(cd));
+                targetCustom.push(null);
 
                 let maxElev = Math.max(...subElevs);
                 let maxIdx = subElevs.indexOf(maxElev);
@@ -459,6 +494,30 @@ function plotElevation(segments, summary, climbs) {
                 });
             }
         });
+
+        if (repechoX.length > 0) {
+            traces.push({
+                x: repechoX,
+                y: repechoY,
+                customdata: repechoCustom,
+                mode: 'lines',
+                line: { color: '#b5830d', width: 5 },
+                showlegend: false,
+                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+            });
+        }
+
+        if (puertoX.length > 0) {
+            traces.push({
+                x: puertoX,
+                y: puertoY,
+                customdata: puertoCustom,
+                mode: 'lines',
+                line: { color: '#e63946', width: 5 },
+                showlegend: false,
+                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+            });
+        }
     }
 
     const layout = {
@@ -484,18 +543,16 @@ function plotElevation(segments, summary, climbs) {
 
     Plotly.newPlot('chart-elevation', traces, layout);
 }
-
 function plotCombined(segments, telemetry) {
     let distAcc = 0;
     const distances = [0];
-    const elevations = [0];
-    let currentElevation = 0;
+    
+    const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
+    elevations.unshift(segments.length > 0 && segments[0].absolute_elevation_m !== undefined ? segments[0].absolute_elevation_m - segments[0].elevation_change_m : 0);
 
     segments.forEach(s => {
         distAcc += s.distance_m / 1000;
         distances.push(distAcc);
-        currentElevation += (s.elevation_change_m || 0);
-        elevations.push(currentElevation);
     });
 
     let simPower = segments.map(s => s.power_watts);
@@ -776,6 +833,7 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
         const labelId = isPuerto ? `P${pCount++}` : `R${rCount++}`;
         const badgeClass = isPuerto ? "badge-puerto" : "badge-repecho";
         const climbDistKm = climb.distance_m / 1000.0;
+        const displayType = climb.display_type || climb.type;
 
         // --- SIMULACIÓN ---
         const segmentsSim = simSegmentsWithDist.filter(s => {
@@ -824,7 +882,12 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><span class="${badgeClass}">[${labelId}] ${climb.type || 'Puerto'}</span></td>
+            <td>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span class="${badgeClass}">[${labelId}]</span>
+                    <span class="badge-subtipo">${displayType}</span>
+                </div>
+            </td>
             <td>${climb.start_dist_km.toFixed(2)} km</td>
             <td>${climbDistKm.toFixed(2)} km</td>
             <td>${climb.elevation_gain_m.toFixed(0)} m</td>
@@ -851,7 +914,6 @@ async function loadExampleTracks() {
             data.examples.forEach(filename => {
                 const option = document.createElement('option');
                 option.value = filename;
-                // Formatear el nombre para que se vea bonito (ej: "alpes.gpx" -> "Alpes")
                 option.textContent = filename.replace(/\.[^/.]+$/, "").toUpperCase();
                 select.appendChild(option);
             });
@@ -861,7 +923,6 @@ async function loadExampleTracks() {
     }
 }
 
-// Evento para cargar el archivo de ejemplo seleccionado
 document.getElementById('btn-load-example').addEventListener('click', async () => {
     const select = document.getElementById('example-select');
     const filename = select.value;
@@ -874,7 +935,6 @@ document.getElementById('btn-load-example').addEventListener('click', async () =
         const blob = await response.blob();
         const file = new File([blob], filename, { type: filename.endsWith('.fit') ? application/octet-stream : "application/gpx+xml" });
 
-        // Inyectar el archivo obtenido en el input de tipo file del formulario
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         document.getElementById('route-file').files = dataTransfer.files;

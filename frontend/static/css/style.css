@@ -377,21 +377,37 @@ button[type="submit"]:hover, #btn-simulate:hover {
     font-size: 0.8rem;
 }
 
-/* --- Clases de utilidad visual migradas desde JavaScript --- */
-.badge-puerto {
+/* Estilo unificado para la etiqueta principal (R1, P3, etc.) */
+.badge-puerto, .badge-repecho {
+    display: inline-block;
     font-weight: 900;
-    color: #e63946;
-    background-color: #e6394615;
-    padding: 0.2rem 0.4rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.badge-puerto {
+    color: #ffffff;
+    background-color: #e63946; /* Fondo rojo fuerte solo para la etiqueta de puerto */
     border: 1px solid #e63946;
 }
 
 .badge-repecho {
-    font-weight: 900;
-    color: #b5830d;
-    background-color: #ffb70315;
-    padding: 0.2rem 0.4rem;
-    border: 1px solid #ffb703;
+    color: #ffffff;
+    background-color: #b5830d; /* Fondo ocre/amarillo fuerte solo para la etiqueta de repecho */
+    border: 1px solid #b5830d;
+}
+
+/* Estilo para el subtipo ("Puerto" / "Repecho") en gris y pequeño debajo */
+.badge-subtipo {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6c757d; /* Gris discreto */
+    letter-spacing: 0.5px;
 }
 
 .col-real {

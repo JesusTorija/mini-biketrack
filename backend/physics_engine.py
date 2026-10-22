@@ -81,7 +81,9 @@ class CyclingPhysicsSimulator:
         dist_acums = []
         current_dist_acum = 0.0
         abs_elevations = []
-        curr_ele = 0.0
+        
+        # Tomar la altitud inicial real sobre el nivel del mar
+        curr_ele = segments[0].get('elevation_start', 0.0) if segments else 0.0
 
         for seg in segments:
             current_dist_acum += seg.get('distance_m', 0.0)
@@ -108,7 +110,7 @@ class CyclingPhysicsSimulator:
             smoothed_pass2.append(avg_ele)
 
         new_segments = []
-        prev_smoothed_ele = 0.0
+        prev_smoothed_ele = segments[0].get('elevation_start', 0.0) if segments else 0.0
         for i, seg in enumerate(segments):
             new_seg = seg.copy()
             current_smoothed_ele = smoothed_pass2[i]
@@ -151,7 +153,7 @@ class CyclingPhysicsSimulator:
                 if grad < -1.0 or (grad < 1.0 and elev_change < 0):
                     if distance_climb >= 200 and elevation_gain >= 30:
                         avg_slope = (elevation_gain / distance_climb) * 100.0
-                        climb_type = "Puerto" if (avg_slope > 4.5 and distance_climb > 500) else "Repecho"
+                        climb_type = "Puerto" if ((avg_slope >= 2 and elevation_gain >= 200) or (avg_slope >= 5.5 and elevation_gain >=100)) else "Repecho"
                         
                         climbs.append({
                             'start_dist_km': start_dist / 1000.0,
@@ -171,7 +173,7 @@ class CyclingPhysicsSimulator:
 
         if in_climb and distance_climb >= 200 and elevation_gain >= 30:
             avg_slope = (elevation_gain / distance_climb) * 100.0
-            climb_type = "Puerto" if (avg_slope > 4.5 and distance_climb > 500) else "Repecho"
+            climb_type = "Puerto" if ((avg_slope >= 2 and elevation_gain >= 200) or (avg_slope >= 5.5 and elevation_gain >=100)) else "Repecho"
             climbs.append({
                 'start_dist_km': start_dist / 1000.0,
                 'end_dist_km': df_sim['distance_accumulated_km'].iloc[-1],
@@ -244,7 +246,6 @@ class CyclingPhysicsSimulator:
         # FACTOR OCULTO DE MUROS: Penalización no lineal de velocidad en pendientes altas
         if elevation_change_m > 0 and gradient_pct > self.steep_wall_threshold:
             excess_slope = gradient_pct - self.steep_wall_threshold
-            # Aplica una fricción/pérdida adicional progresiva por cada % por encima del umbral (ej. > 8%)
             wall_penalty = max(0.75, 1.0 - (excess_slope * 0.015))
             v *= wall_penalty
 
@@ -277,17 +278,21 @@ class CyclingPhysicsSimulator:
             current_v = 4.0
 
         previous_power = self.base_target_power
-        background_elevation = 0.0
+        
+        # Obtener la altitud absoluta real de origen del primer segmento
+        background_elevation = self.segments[0].get('absolute_elevation_m', self.segments[0].get('elevation_start', 0.0)) if self.segments else 0.0
         total_energy_kj = 0.0
 
         for i, seg in enumerate(self.segments):
             dist = seg['distance_m']
             elev_change = seg['elevation_change_m']
             gradient = seg['gradient_percent']
-            background_elevation += elev_change
+            
+            # Actualizar con la elevación absoluta real calculada en origen
+            background_elevation = seg.get('absolute_elevation_m', background_elevation + elev_change)
 
             current_air_density = self.base_air_density * math.exp(-max(0.0, background_elevation) / 8400.0)
-
+            
             altitude_penalty = 1.0
             if background_elevation > 600.0:
                 altitude_penalty = 1.0 - ((background_elevation - 600.0) / 300.0) * 0.01
@@ -330,6 +335,7 @@ class CyclingPhysicsSimulator:
                 'segment_index': i,
                 'distance_m': dist,
                 'elevation_change_m': elev_change,
+                'absolute_elevation_m': background_elevation, # <--- Altitud absoluta desde el origen
                 'gradient_percent': gradient,
                 'speed_kmh': v_kmh,
                 'power_watts': segment_power,

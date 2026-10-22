@@ -1,8 +1,8 @@
 {
   "app_name": "Hors Catégorie",
   "domain": "hors-categorie.com",
-  "smooth_radius_1": 250.0,
-  "smooth_radius_2": 100.0,
+  "smooth_radius_1": 600.0,
+  "smooth_radius_2": 300.0,
   "cyclist": {
     "weight_kg": 59.0,
     "bike_weight_kg": 12.0,
