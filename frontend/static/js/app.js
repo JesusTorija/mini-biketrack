@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000/api/v1/simulate";
+const API_URL = "/api/v1/simulate";
 const CONFIG_API_URL = "/api/config";
 let simulationDataCache = null;
 
@@ -368,7 +368,7 @@ function plotMap(points, segments, climbs) {
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Longitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'Latitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', scaleanchor: 'x', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 50 }, // Margen derecho ampliado (r: 40)
+        margin: { l: 50, r: 40, t: 40, b: 50 },
         height: 380,
         hovermode: 'closest',
         showlegend: false
@@ -466,7 +466,7 @@ function plotElevation(segments, summary, climbs) {
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'Altitud (m)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 60 }, // Margen derecho ampliado (r: 40)
+        margin: { l: 50, r: 40, t: 40, b: 60 },
         height: 380,
         hovermode: 'x unified',
         annotations: annotations,
@@ -660,7 +660,7 @@ function plotCombined(segments, telemetry) {
             range: [0, maxElev * 3.5],
             zorder: 1
         },
-        margin: { l: 60, r: 85, t: 85, b: 60 }, // Margen derecho ampliado a 85 para los ejes secundarios
+        margin: { l: 60, r: 85, t: 85, b: 60 },
         height: 360, 
         hovermode: 'x unified',
         legend: { 
@@ -693,7 +693,7 @@ function plotFatigue(segments) {
         xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'FTP Efectivo (W)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis2: { title: 'Energía (kJ)', overlaying: 'y', side: 'right', showgrid: false, automargin: true },
-        margin: { l: 50, r: 75, t: 40, b: 50 }, // Margen derecho ampliado a 75 para el eje de energía
+        margin: { l: 50, r: 75, t: 40, b: 50 },
         height: 300, 
         hovermode: 'x unified',
         legend: { orientation: 'h', y: 1.15, x: 1, xanchor: 'right', font: { size: 10 } }
@@ -718,7 +718,7 @@ function plotWPrime(segments) {
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true }, 
         yaxis: { title: "W' (%)", range: [0, 105], gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 50 }, // Margen derecho ampliado (r: 40)
+        margin: { l: 50, r: 40, t: 40, b: 50 },
         height: 280, 
         hovermode: 'x unified'
     };
