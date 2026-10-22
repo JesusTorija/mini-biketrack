@@ -1,4 +1,20 @@
-.vscode/
+# Python / Entorno virtual
+venv/
 __pycache__/
-*firebase_credentials.json
-*-firebase-adminsdk-*.json
+*.pyc
+*.pyo
+
+# IDEs y Editores
+.vscode/
+.idea/
+
+# Streamlit (ya no se usa)
+.streamlit/
+
+# Configuraciones y credenciales locales
+config.json
+.env
+comandos_utiles.txt
+
+# Archivos de datos locales o temporales (opcional)
+tracks/

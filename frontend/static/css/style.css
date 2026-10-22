@@ -1,0 +1,414 @@
+/* ==========================================================================
+   BAUHAUS & EUROPEAN MODERNISM (Saul Bass / Swiss Style) - HORS CATÉGORIE
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+body {
+    background-color: #f4f1ea; /* Papel pergamino / crema modernista */
+    color: #121212;
+    overflow-x: hidden;
+    width: 100vw;
+    border-top: 10px solid #e63946; /* Toque Bauhaus Rojo */
+}
+
+header {
+    background-color: #121212;
+    color: #f4f1ea;
+    padding: 1.8rem 2.5rem;
+    border-bottom: 4px solid #121212;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    color: #ffb703; /* Amarillo Bauhaus */
+}
+
+header p {
+    font-size: 0.85rem;
+    font-family: 'Space Mono', monospace;
+    color: #f4f1ea;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+/* Estilo para el logo en el header */
+.header-logo {
+    width: 60px; /* Tamaño profesional */
+    height: 60px;
+    object-fit: contain; /* Garantiza que no se deforme */
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.header-logo:hover {
+    transform: rotate(5deg); /* Toque lúdico ciclista sutil */
+}
+
+.container {
+    display: flex;
+    gap: 2rem;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Barra lateral estructurada */
+.sidebar {
+    width: 350px;
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border: 3px solid #121212;
+    box-shadow: 6px 6px 0px #121212;
+    flex-shrink: 0;
+    height: fit-content;
+    position: relative;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease;
+}
+
+.sidebar-content {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+    overflow: hidden;
+}
+
+/* Botón discreto tipo pestaña con flecha */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: -28px;
+    width: 28px;
+    height: 40px;
+    background-color: #121212;
+    color: #ffb703;
+    border: 2px solid #121212;
+    border-left: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 900;
+    z-index: 10;
+    box-shadow: 3px 3px 0px rgba(0,0,0,0.15);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #e63946;
+    color: #ffffff;
+}
+
+/* Estado contraído del panel lateral */
+.sidebar.is-hidden {
+    width: 0;
+    min-width: 0;
+    padding: 1.5rem 0;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.sidebar.is-hidden .sidebar-content {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.sidebar.is-hidden .sidebar-toggle-btn {
+    right: -28px;
+    border: 2px solid #121212;
+}
+
+.sidebar h2 {
+    font-size: 1.1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    color: #121212;
+    border-bottom: 3px solid #121212;
+    padding-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+
+fieldset {
+    border: 2px solid #121212;
+    background-color: #fcfbfa;
+    padding: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+legend {
+    background-color: #1d3557;
+    color: #f4f1ea;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.form-group {
+    margin-bottom: 0.8rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #121212;
+    margin-bottom: 0.3rem;
+}
+
+.form-group input {
+    background-color: #ffffff;
+    border: 2px solid #121212;
+    color: #121212;
+    padding: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 0;
+}
+
+.form-group input:focus {
+    outline: none;
+    background-color: #ffb70322;
+    border-color: #e63946;
+}
+
+button[type="submit"], #btn-simulate {
+    width: 100%;
+    background-color: #1d3557;
+    color: #f4f1ea;
+    border: 3px solid #121212;
+    padding: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 4px 4px 0px #121212;
+    transition: all 0.1s ease;
+}
+
+button[type="submit"]:hover, #btn-simulate:hover {
+    background-color: #457b9d;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px #121212;
+}
+
+.content {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+}
+
+.metric-card {
+    background-color: #ffffff;
+    border: 3px solid #121212;
+    padding: 1.2rem;
+    box-shadow: 4px 4px 0px #121212;
+    text-align: left;
+    position: relative;
+    border-radius: 0;
+}
+
+.metric-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background-color: #ffb703; /* Acento geométrico amarillo */
+}
+
+.metric-card h3 {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+
+.metric-card p {
+    font-size: 1.5rem;
+    font-weight: 900;
+    font-family: 'Space Mono', monospace;
+    color: #121212;
+}
+
+.sub-real {
+    display: block;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #e63946;
+    margin-top: 0.3rem;
+}
+
+.sync-panel {
+    background-color: #ffffff;
+    border: 3px solid #121212;
+    padding: 1.2rem;
+    box-shadow: 4px 4px 0px #121212;
+    border-radius: 0;
+}
+
+.sync-panel label {
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #121212;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.sync-panel input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    accent-color: #e63946;
+    margin-bottom: 0.8rem;
+}
+
+.detail-box {
+    font-size: 0.85rem;
+    font-family: 'Space Mono', monospace;
+    color: #121212;
+    background-color: #f4f1ea;
+    padding: 0.8rem;
+    border: 2px solid #121212;
+    border-radius: 0;
+}
+
+.row-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.chart-box {
+    background-color: #ffffff;
+    border: 3px solid #121212;
+    border-radius: 0;
+    padding: 0.8rem;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-shadow: 4px 4px 0px #121212;
+    box-sizing: border-box;
+}
+
+.chart-box.wide {
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Tablas de Puertos con Estética Tipográfica */
+.card-section.summary-table-card {
+    background-color: #ffffff;
+    border: 3px solid #121212;
+    padding: 1.5rem;
+    box-shadow: 4px 4px 0px #121212;
+}
+
+.card-section.summary-table-card h3 {
+    font-size: 1.1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5px;
+    border-bottom: 3px solid #121212;
+    padding-bottom: 0.5rem;
+}
+
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.styled-table th {
+    background-color: #121212;
+    color: #f4f1ea;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    padding: 12px;
+    border: 1px solid #121212;
+}
+
+.styled-table td {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+}
+
+/* --- Clases de utilidad visual migradas desde JavaScript --- */
+.badge-puerto {
+    font-weight: 900;
+    color: #e63946;
+    background-color: #e6394615;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid #e63946;
+}
+
+.badge-repecho {
+    font-weight: 900;
+    color: #b5830d;
+    background-color: #ffb70315;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid #ffb703;
+}
+
+.col-real {
+    color: #e63946 !important;
+    font-weight: 700;
+}
+
+@media (max-width: 1300px) {
+    .container {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+    }
+    .row-charts {
+        grid-template-columns: 1fr;
+    }
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: hors_cathedrale_db
+    restart: always
+    environment:
+      POSTGRES_USER: hors_user
+      POSTGRES_PASSWORD: tu_password_segura
+      POSTGRES_DB: hors_categorie_db
+    volumes:
+      data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    container_name: hors_cathedrale_web
+    restart: always
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://hors_user:tu_password_segura@db:5432/hors_categorie_db
+    depends_on:
+      - db
+
+volumes:
+  data:

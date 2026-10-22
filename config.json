@@ -1,38 +1,53 @@
 {
-  "app_name": "Mini BikeTrack App",
+  "app_name": "Hors Catégorie",
+  "domain": "hors-categorie.com",
+  "smooth_radius_1": 250.0,
+  "smooth_radius_2": 100.0,
   "cyclist": {
-    "weight_kg": 58.0,
-    "bike_weight_kg": 7.5,
+    "weight_kg": 59.0,
+    "bike_weight_kg": 12.0,
     "ftp_watts": 195,
-    "intensity_factor": 0.88,
-    "target_power_watts": 220,
-    "w_prime_kj": 14.6,
-    "fatigue_rate_per_1000kj": 5,
-    "cda_seated": 0.4,
-    "cda_standing": 0.6,
-    "rolling_resistance_cr": 0.004,
-    "drivetrain_loss_percent": 2.5
+    "intensity_factor": 0.75,
+    "cda_seated": 0.35,
+    "cda_standing": 0.50,
+    "rolling_resistance_cr": 0.005,
+    "drivetrain_loss_percent": 3.5,
+    "w_prime_kj": 20.0,
+    "fatigue_rate_per_1000kj": 1.5,
+    "severe_depletion_penalty_factor": 0.92,
+    "severe_depletion_threshold_pct": 15.0
   },
   "environment": {
     "air_density": 1.225,
     "wind_speed_ms": 0.0
   },
   "simulation_limits": {
-    "max_descent_speed_kmh": 60.0,
+    "min_speed_ms": 1.0,
+    "max_descent_speed_kmh": 75.0,
     "descent_braking_factor": 0.85,
-    "standing_speed_threshold_kmh": 15.0
+    "braking_speed_threshold_kmh": 45.0,
+    "technical_descent_gradient": -8.0,
+    "technical_descent_damping": 0.75,
+    "standing_speed_threshold_kmh": 15.0,
+    "gravity_assist_cap_kmh": 85.0
   },
   "power_strategy": {
     "climb_gradient_threshold": 4.0,
     "climb_power_multiplier": 1.15,
-    "descent_gradient_threshold": -2.0,
+    "climb_excess_gradient_factor": 0.03,
+    "descent_gradient_threshold": -4.5,
     "descent_power_watts": 20.0,
-    "false_flat_power_factor": 0.4
+    "false_flat_gradient_limit": 0.0,
+    "false_flat_power_factor": 0.75,
+    "exhausted_power_multiplier": 0.90
   },
   "inertia": {
-    "previous_speed_weight": 0.6,
-    "current_speed_weight": 0.4,
-    "previous_power_weight": 0.7,
-    "current_power_weight": 0.3
+    "previous_speed_weight": 0.75,
+    "current_speed_weight": 0.25,
+    "previous_power_weight": 0.8,
+    "current_power_weight": 0.2,
+    "w_prime_recovery_multiplier": 0.1,
+    "w_prime_accumulation_divisor": 3000.0,
+    "w_prime_min_accumulation_factor": 0.4
   }
 }
