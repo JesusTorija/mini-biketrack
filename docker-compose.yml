@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -10,7 +8,7 @@ services:
       POSTGRES_PASSWORD: tu_password_segura
       POSTGRES_DB: hors_categorie_db
     volumes:
-      - data:/var/lib/postgresql/data   # <--- Añadido el guion aquí
+      - data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -18,7 +16,7 @@ services:
     build: .
     container_name: hors_cathedrale_web
     restart: always
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     volumes:
       - .:/app
     ports:
