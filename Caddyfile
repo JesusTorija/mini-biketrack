@@ -1,0 +1,7 @@
+hors-categorie.com {
+    reverse_proxy web:8000
+}
+
+www.hors-categorie.com {
+    redir https://hors-categorie.com{uri}
+}

@@ -19,12 +19,28 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     volumes:
       - .:/app
-    ports:
-      - "80:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=postgresql://hors_user:tu_password_segura@db:5432/hors_categorie_db
     depends_on:
       - db
 
+  caddy:
+    image: caddy:latest
+    container_name: hors_cathedrale_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   data:
+  caddy_data:
+  caddy_config:
