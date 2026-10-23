@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadExampleTracks();
 });
 
+// Configuración responsive para los gráficos de Plotly
+const plotlyConfig = {
+    responsive: true,
+    displayModeBar: 'hover', // Muestra la barra de herramientas solo cuando el usuario interactúa
+    displaylogo: false       // Oculta el logo oficial de Plotly para ganar espacio
+};
+
 async function loadInitialConfig() {
     try {
         const response = await fetch(CONFIG_API_URL);
@@ -406,7 +413,7 @@ function plotMap(points, segments, climbs) {
         showlegend: false
     };
 
-    Plotly.newPlot('chart-map', traces, layout);
+    Plotly.newPlot('chart-map', traces, layout, plotlyConfig);
 }
 
 function plotElevation(segments, summary, climbs) {
@@ -554,7 +561,7 @@ function plotElevation(segments, summary, climbs) {
         }
     };
 
-    Plotly.newPlot('chart-elevation', traces, layout);
+    Plotly.newPlot('chart-elevation', traces, layout, plotlyConfig);
 }
 function plotCombined(segments, telemetry) {
     let distAcc = 0;
@@ -745,7 +752,7 @@ function plotCombined(segments, telemetry) {
         }
     };
     
-    Plotly.newPlot('chart-combined', traces, layout);
+    Plotly.newPlot('chart-combined', traces, layout, plotlyConfig);
 }
 
 function plotFatigue(segments) {
@@ -770,7 +777,7 @@ function plotFatigue(segments) {
         hovermode: 'x unified',
         legend: { orientation: 'h', y: 1.15, x: 1, xanchor: 'right', font: { size: 10 } }
     };
-    Plotly.newPlot('chart-fatigue', [traceFtp, traceEnergy], layout);
+    Plotly.newPlot('chart-fatigue', [traceFtp, traceEnergy], layout, plotlyConfig);
 }
 
 function plotWPrime(segments) {
@@ -794,7 +801,7 @@ function plotWPrime(segments) {
         height: 280, 
         hovermode: 'x unified'
     };
-    Plotly.newPlot('chart-wprime', [traceW], layout);
+    Plotly.newPlot('chart-wprime', [traceW], layout, plotlyConfig);
 }
 
 function renderClimbsSummaryTable(simulationData, telemetryRecords) {
