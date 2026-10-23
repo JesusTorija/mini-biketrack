@@ -301,12 +301,17 @@ function plotMap(points, segments, climbs) {
 
 function plotElevation(segments, summary, climbs) {
     let distAcc = 0;
-    const distances = [0], gradients = [segments[0]?.gradient_percent || 0];
-    const elevations = segments.map(s => s.absolute_elevation_m ?? 0);
-    elevations.unshift(segments[0]?.absolute_elevation_m ? segments[0].absolute_elevation_m - segments[0].elevation_change_m : 0);
+    const distances = [0], gradients = [segments.length > 0 ? (segments[0].gradient_percent || 0) : 0];
+    
+    const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
+    if (segments.length > 0 && segments[0].absolute_elevation_m !== undefined) {
+        elevations.unshift(segments[0].absolute_elevation_m - (segments[0].elevation_change_m || 0));
+    } else {
+        elevations.unshift(0);
+    }
 
     segments.forEach(s => {
-        distAcc += s.distance_m / 1000;
+        distAcc += (s.distance_m || 0) / 1000;
         distances.push(distAcc);
         gradients.push(s.gradient_percent || 0);
     });
@@ -329,7 +334,6 @@ function plotElevation(segments, summary, climbs) {
     const repechoX = [], repechoY = [], repechoCustom = [];
     const puertoX = [], puertoY = [], puertoCustom = [];
 
-    // Recuperar el dibujado de las líneas superpuestas en el perfil de elevación
     if (climbs && climbs.length > 0) {
         climbs.forEach(climb => {
             const isPuerto = climb.type === "Puerto";
@@ -342,7 +346,7 @@ function plotElevation(segments, summary, climbs) {
             let runningDist = 0;
 
             segments.forEach((s) => {
-                const segDist = s.distance_m / 1000;
+                const segDist = (s.distance_m || 0) / 1000;
                 const prevDist = runningDist;
                 runningDist += segDist;
                 const segElev = s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0;
@@ -437,25 +441,162 @@ function plotElevation(segments, summary, climbs) {
 function plotCombined(segments, telemetry) {
     let distAcc = 0;
     const distances = [0];
-    const elevations = segments.map(s => s.absolute_elevation_m ?? 0);
-    elevations.unshift(segments[0]?.absolute_elevation_m ? segments[0].absolute_elevation_m - segments[0].elevation_change_m : 0);
+    const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
+    elevations.unshift(segments.length > 0 && segments[0].absolute_elevation_m !== undefined ? segments[0].absolute_elevation_m - (segments[0].elevation_change_m || 0) : 0);
 
-    segments.forEach(s => { distAcc += s.distance_m / 1000; distances.push(distAcc); });
+    segments.forEach(s => { 
+        distAcc += (s.distance_m || 0) / 1000; 
+        distances.push(distAcc); 
+    });
 
-    const traces = [
-        { x: distances, y: elevations, fill: 'tozeroy', fillcolor: 'rgba(200, 200, 200, 0.1)', line: { color: 'rgba(150, 150, 150, 0.2)' }, yaxis: 'y3', hoverinfo: 'skip' },
-        { x: distances.slice(1), y: segments.map(s => s.power_watts), name: 'Potencia Sim. (W)', line: { color: '#b5830d', width: 2.5 } },
-        { x: distances.slice(1), y: segments.map(s => s.speed_kmh), name: 'Velocidad Sim. (km/h)', line: { color: '#1d3557', width: 2.5 }, yaxis: 'y2' }
-    ];
+    let simPower = segments.map(s => s.power_watts);
+    let simSpeed = segments.map(s => s.speed_kmh);
+    let simTimes = segments.map(s => s.time_seconds || 0);
 
-    const maxElev = Math.max(...elevations, 500);
+    let simTimeAcc = [];
+    let cumulativeT = 0;
+    simTimes.forEach(t => {
+        cumulativeT += t;
+        simTimeAcc.push(cumulativeT);
+    });
+
+    const smoothWindow = (arr, win) => {
+        const res = [];
+        for (let i = 0; i < arr.length; i++) {
+            let sum = 0, count = 0;
+            for (let j = Math.max(0, i - Math.floor(win/2)); j <= Math.min(arr.length - 1, i + Math.floor(win/2)); j++) {
+                sum += arr[j];
+                count++;
+            }
+            res.push(sum / count);
+        }
+        return res;
+    };
+
+    if (simPower.length > 50) {
+        const windowSize = Math.max(5, Math.floor(simPower.length / 100));
+        simPower = smoothWindow(simPower, windowSize);
+        simSpeed = smoothWindow(simSpeed, windowSize);
+    }
+
+    const traceElevBg = {
+        x: distances,
+        y: elevations,
+        name: 'Perfil de Ruta',
+        fill: 'tozeroy',
+        fillcolor: 'rgba(200, 200, 200, 0.1)',
+        line: { color: 'rgba(150, 150, 150, 0.2)', width: 1 },
+        yaxis: 'y3',
+        hoverinfo: 'skip'
+    };
+
+    const tracePower = {
+        x: distances.slice(1),
+        y: simPower,
+        name: 'Potencia Simulada (W)',
+        line: { color: '#b5830d', width: 2.5 },
+        hovertemplate: 'Potencia Sim.: %{y:.1f} W<extra></extra>'
+    };
+
+    const traceSpeed = {
+        x: distances.slice(1),
+        y: simSpeed,
+        name: 'Velocidad Sim. (km/h)',
+        line: { color: '#1d3557', width: 2.5 },
+        yaxis: 'y2',
+        hovertemplate: 'Velocidad Sim.: %{y:.1f} km/h<extra></extra>'
+    };
+
+    const traces = [traceElevBg, tracePower, traceSpeed];
+
+    // Restaurar trazas de telemetría real si existen
+    if (telemetry && telemetry.length > 0) {
+        let telDist = telemetry.map(t => t.distance_accumulated_km || 0);
+        let telPower = telemetry.map(t => t.real_power_watts !== undefined ? t.real_power_watts : (t.power_watts || 0));
+        let telSpeed = telemetry.map(t => t.real_speed_kmh !== undefined ? t.real_speed_kmh : 0);
+
+        let maxSimDist = distances[distances.length - 1];
+        let maxTelDist = telDist[telDist.length - 1];
+        if (maxTelDist > 0 && maxSimDist > 0) {
+            telDist = telDist.map(d => (d / maxTelDist) * maxSimDist);
+        }
+
+        let telTimesAcc = [];
+        if (telemetry[0].time) {
+            let t0 = new Date(telemetry[0].time).getTime();
+            telemetry.forEach(t => {
+                let tCurr = new Date(t.time).getTime();
+                telTimesAcc.push((tCurr - t0) / 1000.0);
+            });
+        } else {
+            let tSum = 0;
+            telemetry.forEach((t, idx) => {
+                if (idx > 0) {
+                    let dStep = telDist[idx] - telDist[idx-1];
+                    let vMs = (telSpeed[idx] || 20) / 3.6;
+                    tSum += vMs > 0 ? (dStep * 1000) / vMs : 0;
+                }
+                telTimesAcc.push(tSum);
+            });
+        }
+
+        if (telPower.length > 50) {
+            const windowSize = Math.max(5, Math.floor(telPower.length / 100));
+            telPower = smoothWindow(telPower, windowSize);
+            telSpeed = smoothWindow(telSpeed, windowSize);
+        }
+
+        let timeDiffCustom = [];
+        for (let i = 0; i < telDist.length; i++) {
+            let dCurrent = telDist[i];
+            let simIdx = 0;
+            let minDDiff = Infinity;
+            for (let j = 0; j < distances.length; j++) {
+                let dDiff = Math.abs(distances[j] - dCurrent);
+                if (dDiff < minDDiff) {
+                    minDDiff = dDiff;
+                    simIdx = j;
+                }
+            }
+            let simT = simTimeAcc[Math.max(0, simIdx - 1)] || 0;
+            let realT = telTimesAcc[i] || 0;
+            let diffSec = realT - simT;
+            
+            let sign = diffSec >= 0 ? "+" : "-";
+            let absSec = Math.abs(diffSec);
+            let m = Math.floor(absSec / 60);
+            let s = Math.floor(absSec % 60);
+            timeDiffCustom.push(`${sign}${m}m ${s}s`);
+        }
+
+        traces.push({
+            x: telDist,
+            y: telPower,
+            name: 'Potencia Real',
+            line: { color: '#e63946', dash: 'dot', width: 2 },
+            customdata: timeDiffCustom,
+            hovertemplate: 'Potencia Real: %{y:.1f} W<br>Desfase T: %{customdata}<extra></extra>'
+        });
+
+        traces.push({
+            x: telDist,
+            y: telSpeed,
+            name: 'Velocidad Real',
+            line: { color: '#457b9d', dash: 'dot', width: 2 },
+            yaxis: 'y2',
+            customdata: timeDiffCustom,
+            hovertemplate: 'Velocidad Real: %{y:.1f} km/h<br>Desfase T: %{customdata}<extra></extra>'
+        });
+    }
+
+    const maxElev = elevations.length > 0 ? Math.max(...elevations) : 500;
     const layout = {
         ...getCommonLayout('DINÁMICA DE RUTA: POTENCIA, VELOCIDAD Y PERFIL'),
-        xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', automargin: true },
-        yaxis: { title: 'Potencia (W)', gridcolor: '#e5e1dc', automargin: true },
+        xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', automargin: true },
+        yaxis: { title: 'Potencia (W)', side: 'left', gridcolor: '#e5e1dc', automargin: true },
         yaxis2: { title: 'Velocidad (km/h)', overlaying: 'y', side: 'right', showgrid: false, automargin: true },
-        yaxis3: { overlaying: 'y', side: 'right', showgrid: false, showticklabels: false, range: [0, maxElev * 3.5] },
-        legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center' }
+        yaxis3: { title: '', overlaying: 'y', side: 'right', showgrid: false, showticklabels: false, range: [0, maxElev * 3.5] },
+        legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { size: 10 } }
     };
 
     renderPlotlyChart('chart-combined', traces, layout);
@@ -543,22 +684,108 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
     const climbs = simulationData.detected_climbs || [];
 
     if (!climbs.length) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 15px;">No se han detectado puertos significativos.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 15px; color: #6c757d;">No se han detectado puertos o tramos significativos en esta ruta.</td></tr>`;
         return;
     }
 
+    let runningSimDist = 0;
+    const simSegmentsWithDist = (simulationData.segments_simulation || []).map(s => {
+        runningSimDist += (s.distance_m || 0) / 1000.0;
+        return { ...s, accumulated_km: runningSimDist };
+    });
+
+    let telSegmentsWithDist = [];
+    if (telemetryRecords && telemetryRecords.length > 0) {
+        let runningTelDist = 0;
+        telSegmentsWithDist = telemetryRecords.map((t, idx) => {
+            if (idx > 0) {
+                const prev = telemetryRecords[idx - 1];
+                runningTelDist += haversine(prev.latitude, prev.longitude, t.latitude, t.longitude) / 1000.0;
+            }
+            return { ...t, accumulated_km: t.distance_accumulated_km !== undefined ? t.distance_accumulated_km : runningTelDist };
+        });
+    }
+
+    function formatSecToTime(sec) {
+        if (!sec || isNaN(sec)) return '--:--';
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = Math.floor(sec % 60);
+        if (h > 0) return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
     let pCount = 1, rCount = 1;
-    climbs.forEach(climb => {
-        const isP = climb.type === "Puerto";
-        const labelId = isP ? `P${pCount++}` : `R${rCount++}`;
+
+    climbs.forEach((climb) => {
+        const isPuerto = climb.type === "Puerto";
+        const labelId = isPuerto ? `P${pCount++}` : `R${rCount++}`;
+        const badgeClass = isPuerto ? "badge-puerto" : "badge-repecho";
+        const climbDistKm = (climb.distance_m || 0) / 1000.0;
+        const displayType = climb.display_type || climb.type;
+
+        // SIMULACIÓN
+        const segmentsSim = simSegmentsWithDist.filter(s => {
+            const distKm = s.accumulated_km || 0;
+            return distKm >= climb.start_dist_km && distKm <= climb.end_dist_km;
+        });
+
+        let simPower = 0;
+        let simTimeSec = 0;
+        if (segmentsSim.length > 0) {
+            simPower = segmentsSim.reduce((acc, curr) => acc + (curr.power_watts || 0), 0) / segmentsSim.length;
+            simTimeSec = segmentsSim.reduce((acc, curr) => acc + (curr.time_seconds || 0), 0);
+        }
+        let simSpeed = (simTimeSec > 0 && climbDistKm > 0) ? climbDistKm / (simTimeSec / 3600.0) : 0;
+
+        // REALIDAD
+        let realSpeed = '--';
+        let realPower = '--';
+        let realTimeStr = '--:--';
+
+        if (telSegmentsWithDist.length > 0) {
+            const telInRange = telSegmentsWithDist.filter(t => {
+                const distKm = t.accumulated_km || 0;
+                return distKm >= climb.start_dist_km && distKm <= climb.end_dist_km;
+            });
+
+            if (telInRange.length > 0) {
+                const rPowers = telInRange.map(t => t.real_power_watts !== undefined ? t.real_power_watts : t.power_watts).filter(v => v !== undefined);
+                if (rPowers.length > 0) {
+                    realPower = (rPowers.reduce((a, b) => a + b, 0) / rPowers.length).toFixed(1) + ' W';
+                }
+
+                if (telInRange[0].time && telInRange[telInRange.length - 1].time) {
+                    const tStart = new Date(telInRange[0].time).getTime();
+                    const tEnd = new Date(telInRange[telInRange.length - 1].time).getTime();
+                    const diffSec = (tEnd - tStart) / 1000.0;
+                    if (diffSec > 0) {
+                        realTimeStr = formatSecToTime(diffSec);
+                        const realSpeedVal = climbDistKm / (diffSec / 3600.0);
+                        realSpeed = realSpeedVal.toFixed(1) + ' km/h';
+                    }
+                }
+            }
+        }
+
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><span class="${isP ? 'badge-puerto' : 'badge-repecho'}">[${labelId}]</span></td>
+            <td>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span class="${badgeClass}">[${labelId}]</span>
+                    <span class="badge-subtipo">${displayType}</span>
+                </div>
+            </td>
             <td>${climb.start_dist_km.toFixed(2)} km</td>
-            <td>${(climb.distance_m/1000).toFixed(2)} km</td>
-            <td>${climb.elevation_gain_m.toFixed(0)} m</td>
-            <td>${climb.average_slope_percent.toFixed(1)}%</td>
-            <td colspan="6" style="text-align:center; color:#888;">Procesado</td>
+            <td>${climbDistKm.toFixed(2)} km</td>
+            <td>${(climb.elevation_gain_m || 0).toFixed(0)} m</td>
+            <td>${(climb.average_slope_percent || 0).toFixed(1)}%</td>
+            <td>${formatSecToTime(simTimeSec)}</td>
+            <td class="col-real">${realTimeStr}</td>
+            <td>${simSpeed.toFixed(1)} km/h</td>
+            <td class="col-real">${realSpeed}</td>
+            <td>${simPower.toFixed(0)} W</td>
+            <td class="col-real">${realPower}</td>
         `;
         tbody.appendChild(row);
     });
