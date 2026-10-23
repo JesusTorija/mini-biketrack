@@ -17,8 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 toggleButton.textContent = '◀';
             }
+
+            // Redimensionar gráficos al alternar manualmente el panel
+            setTimeout(resizeAllCharts, 350);
         });
     }
+
+    // Escuchar el cambio de tamaño de la ventana (orientación/resize)
+    window.addEventListener('resize', resizeAllCharts);
 
     loadExampleTracks();
 });
@@ -26,9 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // Configuración responsive para los gráficos de Plotly
 const plotlyConfig = {
     responsive: true,
-    displayModeBar: 'hover', // Muestra la barra de herramientas solo cuando el usuario interactúa
-    displaylogo: false       // Oculta el logo oficial de Plotly para ganar espacio
+    displayModeBar: 'hover', // Muestra la barra de herramientas solo al interactuar
+    displaylogo: false       // Oculta el logo de Plotly
 };
+
+function resizeAllCharts() {
+    ['chart-map', 'chart-elevation', 'chart-combined', 'chart-fatigue', 'chart-wprime'].forEach(chartId => {
+        const el = document.getElementById(chartId);
+        if (el && typeof Plotly !== 'undefined' && el.data) {
+            Plotly.Plots.resize(el);
+        }
+    });
+}
 
 async function loadInitialConfig() {
     try {
@@ -157,7 +172,7 @@ function renderDashboard(data) {
     const resultsWrapper = document.getElementById('results-wrapper');
     resultsWrapper.classList.remove('hidden');
 
-    // --- 1. Ocultar el panel lateral automáticamente tras simular ---
+    // Ocultar el panel lateral automáticamente tras simular
     const sidebar = document.getElementById('sidebar');
     const toggleButton = document.getElementById('toggle-sidebar-btn');
     if (sidebar && !sidebar.classList.contains('is-hidden')) {
@@ -165,7 +180,7 @@ function renderDashboard(data) {
         if (toggleButton) toggleButton.textContent = '▶';
     }
 
-    // --- 2. Auto-scroll suave hacia la zona de resultados ---
+    // Auto-scroll suave hacia la zona de resultados
     resultsWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const sim = data.simulation;
@@ -220,6 +235,9 @@ function renderDashboard(data) {
     
     updateAllChartsSync(0);
     setupChartClickEvents();
+
+    // Recalcular dimensiones de los gráficos tras colapsar el sidebar
+    setTimeout(resizeAllCharts, 350);
 }
 
 function updateAllChartsSync(km) {
@@ -323,6 +341,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 function plotMap(points, segments, climbs) {
     if (!points || points.length === 0) return;
 
+    const isMobile = window.innerWidth <= 768;
     let distAcc = 0;
     const lons = [], lats = [], elevs = [], dists = [], gradients = [];
 
@@ -401,14 +420,14 @@ function plotMap(points, segments, climbs) {
     traces.push(traceMarker);
 
     const layout = {
-        title: { text: 'MAPA DE LA RUTA', font: { size: 13, weight: 900 } },
+        title: { text: 'MAPA DE LA RUTA', font: { size: isMobile ? 11 : 13, weight: 900 } },
         paper_bgcolor: '#ffffff',
         plot_bgcolor: '#fcfbfa',
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Longitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'Latitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', scaleanchor: 'x', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 50 },
-        height: 380,
+        margin: { l: isMobile ? 40 : 50, r: isMobile ? 20 : 40, t: isMobile ? 55 : 40, b: 40 },
+        height: isMobile ? 320 : 380,
         hovermode: 'closest',
         showlegend: false
     };
@@ -417,10 +436,11 @@ function plotMap(points, segments, climbs) {
 }
 
 function plotElevation(segments, summary, climbs) {
+    const isMobile = window.innerWidth <= 768;
     let distAcc = 0;
     const distances = [0], gradients = [segments.length > 0 ? segments[0].gradient_percent : 0];
 
-    // Construir el perfil general usando la altitud absoluta real desde origen
+    // Perfil general usando la altitud absoluta real
     const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
     if (segments.length > 0 && segments[0].absolute_elevation_m !== undefined) {
         elevations.unshift(segments[0].absolute_elevation_m - segments[0].elevation_change_m);
@@ -468,7 +488,6 @@ function plotElevation(segments, summary, climbs) {
                 const prevDist = runningDist;
                 runningDist += segDist;
                 
-                // Usar la altitud absoluta real del segmento en lugar de acumular desde 0
                 const segElev = s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0;
 
                 if (runningDist >= climb.start_dist_km && prevDist <= climb.end_dist_km) {
@@ -541,14 +560,14 @@ function plotElevation(segments, summary, climbs) {
     }
 
     const layout = {
-        title: { text: 'PERFIL DE ELEVACIÓN Y PUERTOS', font: { size: 13, weight: 900 } },
+        title: { text: 'PERFIL DE ELEVACIÓN Y PUERTOS', font: { size: isMobile ? 11 : 13, weight: 900 } },
         paper_bgcolor: '#ffffff',
         plot_bgcolor: '#fcfbfa',
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'Altitud (m)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 60 },
-        height: 380,
+        margin: { l: isMobile ? 40 : 50, r: isMobile ? 20 : 40, t: isMobile ? 55 : 40, b: isMobile ? 40 : 60 },
+        height: isMobile ? 320 : 380,
         hovermode: 'x unified',
         annotations: annotations,
         legend: {
@@ -563,7 +582,9 @@ function plotElevation(segments, summary, climbs) {
 
     Plotly.newPlot('chart-elevation', traces, layout, plotlyConfig);
 }
+
 function plotCombined(segments, telemetry) {
+    const isMobile = window.innerWidth <= 768;
     let distAcc = 0;
     const distances = [0];
     
@@ -721,7 +742,7 @@ function plotCombined(segments, telemetry) {
     const layout = {
         title: {
             text: 'DINÁMICA DE RUTA: POTENCIA, VELOCIDAD Y PERFIL',
-            font: { size: 13, weight: 900 }
+            font: { size: isMobile ? 11 : 13, weight: 900 }
         },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
@@ -739,8 +760,8 @@ function plotCombined(segments, telemetry) {
             range: [0, maxElev * 3.5],
             zorder: 1
         },
-        margin: { l: 60, r: 85, t: 85, b: 60 },
-        height: 360, 
+        margin: { l: isMobile ? 40 : 60, r: isMobile ? 40 : 85, t: isMobile ? 65 : 85, b: isMobile ? 40 : 60 },
+        height: isMobile ? 320 : 360, 
         hovermode: 'x unified',
         legend: { 
             orientation: 'h', 
@@ -756,6 +777,7 @@ function plotCombined(segments, telemetry) {
 }
 
 function plotFatigue(segments) {
+    const isMobile = window.innerWidth <= 768;
     let distAcc = 0;
     const distances = segments.map(s => { distAcc += s.distance_m / 1000; return distAcc; });
     const ftpEff = segments.map(s => s.effective_ftp_watts);
@@ -765,15 +787,15 @@ function plotFatigue(segments) {
     const traceEnergy = { x: distances, y: energy, name: 'Energía (kJ)', line: { color: '#e63946', width: 2, dash: 'dot' }, yaxis: 'y2' };
 
     const layout = {
-        title: { text: 'EVOLUCIÓN DE LA FATIGA: FTP EFECTIVO Y ENERGÍA', font: { size: 13, weight: 900 } },
+        title: { text: 'EVOLUCIÓN DE LA FATIGA: FTP EFECTIVO Y ENERGÍA', font: { size: isMobile ? 11 : 13, weight: 900 } },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis: { title: 'FTP Efectivo (W)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
         yaxis2: { title: 'Energía (kJ)', overlaying: 'y', side: 'right', showgrid: false, automargin: true },
-        margin: { l: 50, r: 75, t: 40, b: 50 },
-        height: 300, 
+        margin: { l: isMobile ? 40 : 50, r: isMobile ? 40 : 75, t: isMobile ? 55 : 40, b: isMobile ? 40 : 50 },
+        height: isMobile ? 280 : 300, 
         hovermode: 'x unified',
         legend: { orientation: 'h', y: 1.15, x: 1, xanchor: 'right', font: { size: 10 } }
     };
@@ -781,6 +803,7 @@ function plotFatigue(segments) {
 }
 
 function plotWPrime(segments) {
+    const isMobile = window.innerWidth <= 768;
     let distAcc = 0;
     const distances = segments.map(s => { distAcc += s.distance_m / 1000; return distAcc; });
     const wPrime = segments.map(s => s.w_prime_percent);
@@ -791,14 +814,14 @@ function plotWPrime(segments) {
     };
 
     const layout = {
-        title: { text: "CAPACIDAD ANAERÓBICA: W' DISPONIBLE (%)", font: { size: 13, weight: 900 } },
+        title: { text: "CAPACIDAD ANAERÓBICA: W' DISPONIBLE (%)", font: { size: isMobile ? 11 : 13, weight: 900 } },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true }, 
         yaxis: { title: "W' (%)", range: [0, 105], gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        margin: { l: 50, r: 40, t: 40, b: 50 },
-        height: 280, 
+        margin: { l: isMobile ? 40 : 50, r: isMobile ? 20 : 40, t: isMobile ? 55 : 40, b: isMobile ? 40 : 50 },
+        height: isMobile ? 260 : 280, 
         hovermode: 'x unified'
     };
     Plotly.newPlot('chart-wprime', [traceW], layout, plotlyConfig);
@@ -855,7 +878,7 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
         const climbDistKm = climb.distance_m / 1000.0;
         const displayType = climb.display_type || climb.type;
 
-        // --- SIMULACIÓN ---
+        // SIMULACIÓN
         const segmentsSim = simSegmentsWithDist.filter(s => {
             const distKm = s.accumulated_km || 0;
             return distKm >= climb.start_dist_km && distKm <= climb.end_dist_km;
@@ -870,7 +893,7 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
 
         let simSpeed = (simTimeSec > 0 && climbDistKm > 0) ? climbDistKm / (simTimeSec / 3600.0) : 0;
 
-        // --- REALIDAD ---
+        // REALIDAD
         let realSpeed = '--';
         let realPower = '--';
         let realTimeStr = '--:--';
