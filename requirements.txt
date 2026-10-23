@@ -7,3 +7,7 @@ numpy>=1.24.0
 fitparse>=1.2.0
 gpxpy>=1.6.0
 psycopg2-binary
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0
+alembic>=1.13.0
+pydantic-settings>=2.0.0

@@ -216,24 +216,84 @@ function haversine(lat1, lon1, lat2, lon2) {
 function plotMap(points, segments, climbs) {
     if (!points?.length) return;
     let distAcc = 0;
-    const lons = [], lats = [], custom = [];
+    const lons = [], lats = [], elevs = [], dists = [], gradients = [];
 
     points.forEach((p, idx) => {
-        lats.push(p.latitude); lons.push(p.longitude);
-        if (idx > 0) distAcc += haversine(points[idx-1].latitude, points[idx-1].longitude, p.latitude, p.longitude) / 1000;
-        custom.push([distAcc, p.elevation, segments[idx]?.gradient_percent || 0]);
+        lats.push(p.latitude);
+        lons.push(p.longitude);
+        elevs.push(p.elevation);
+        if (idx > 0) {
+            distAcc += haversine(points[idx-1].latitude, points[idx-1].longitude, points[idx].latitude, points[idx].longitude) / 1000;
+        }
+        dists.push(distAcc);
+        gradients.push(segments[idx]?.gradient_percent || 0);
     });
 
-    const traces = [
-        { x: lons, y: lats, customdata: custom, mode: 'lines', line: { width: 3.5, color: '#1d3557' }, name: 'Ruta General', hovertemplate: '<b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>' },
-        { x: [points[0].longitude], y: [points[0].latitude], mode: 'markers', marker: { size: 12, color: '#e63946' }, name: 'Posición', hoverinfo: 'skip' }
-    ];
+    const traceRoute = {
+        x: lons,
+        y: lats,
+        customdata: dists.map((d, i) => [d, elevs[i], gradients[i]]),
+        mode: 'lines',
+        line: { width: 3.5, color: '#1d3557' },
+        name: 'Ruta General',
+        hovertemplate: '<b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>'
+    };
+
+    const traces = [traceRoute];
+
+    // Recuperar el dibujado de los puertos/repechos sobre el mapa
+    if (climbs && climbs.length > 0) {
+        climbs.forEach(climb => {
+            const isPuerto = climb.type === "Puerto";
+            const color = isPuerto ? "#e63946" : "#ffb703";
+            const displayType = climb.display_type || climb.type;
+            
+            const climbLons = [], climbLats = [], climbElevs = [], climbDists = [], climbGrads = [];
+            let runningDist = 0;
+
+            for (let i = 0; i < points.length; i++) {
+                if (i > 0) {
+                    runningDist += haversine(points[i-1].latitude, points[i-1].longitude, points[i].latitude, points[i].longitude) / 1000;
+                }
+                if (runningDist >= climb.start_dist_km && runningDist <= climb.end_dist_km) {
+                    climbLons.push(points[i].longitude);
+                    climbLats.push(points[i].latitude);
+                    climbElevs.push(points[i].elevation);
+                    climbDists.push(runningDist);
+                    climbGrads.push(segments[i]?.gradient_percent || 0);
+                }
+            }
+
+            if (climbLons.length > 1) {
+                traces.push({
+                    x: climbLons,
+                    y: climbLats,
+                    customdata: climbDists.map((d, i) => [d, climbElevs[i], climbGrads[i]]),
+                    mode: 'lines',
+                    line: { width: 5, color: color },
+                    name: displayType,
+                    hovertemplate: `<b>${displayType}</b><br><b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>`
+                });
+            }
+        });
+    }
+
+    const traceMarker = {
+        x: [points[0].longitude],
+        y: [points[0].latitude],
+        mode: 'markers',
+        marker: { size: 12, color: '#e63946', symbol: 'circle', line: { width: 2, color: '#121212' } },
+        name: 'Posición',
+        hoverinfo: 'skip'
+    };
+    traces.push(traceMarker);
 
     const layout = {
         ...getCommonLayout('MAPA DE LA RUTA'),
         xaxis: { title: 'Longitud', gridcolor: '#e5e1dc', automargin: true },
         yaxis: { title: 'Latitud', gridcolor: '#e5e1dc', scaleanchor: 'x', automargin: true },
-        hovermode: 'closest', showlegend: false
+        hovermode: 'closest',
+        showlegend: false
     };
 
     renderPlotlyChart('chart-map', traces, layout);
@@ -251,41 +311,124 @@ function plotElevation(segments, summary, climbs) {
         gradients.push(s.gradient_percent || 0);
     });
 
-    const traces = [{
-        x: distances, y: elevations, customdata: gradients, fill: 'tozeroy', fillcolor: 'rgba(29, 53, 87, 0.08)',
-        line: { color: '#1d3557', width: 2.5 }, name: 'Perfil General',
+    const traceElev = {
+        x: distances,
+        y: elevations,
+        customdata: gradients,
+        fill: 'tozeroy',
+        fillcolor: 'rgba(29, 53, 87, 0.08)',
+        line: { color: '#1d3557', width: 2.5 },
+        name: 'Perfil General',
         hovertemplate: '<b>KM:</b> %{x:.2f} km<br><b>Altitud:</b> %{y:.1f} m<br><b>Pendiente:</b> %{customdata:.1f}%<extra></extra>'
-    }];
+    };
 
+    const traces = [traceElev];
     const annotations = [];
     let pCount = 1, rCount = 1;
 
-    if (climbs?.length) {
-        climbs.forEach(climb => {
-            const isP = climb.type === "Puerto", color = isP ? "#e63946" : "#b5830d";
-            const labelId = isP ? `P${pCount++}` : `R${rCount++}`;
-            const subD = [], subE = [];
-            let rDist = 0;
+    const repechoX = [], repechoY = [], repechoCustom = [];
+    const puertoX = [], puertoY = [], puertoCustom = [];
 
-            segments.forEach(s => {
-                rDist += s.distance_m / 1000;
-                if (rDist >= climb.start_dist_km && (rDist - s.distance_m/1000) <= climb.end_dist_km) {
-                    subD.push(rDist); subE.push(s.absolute_elevation_m ?? 0);
+    // Recuperar el dibujado de las líneas superpuestas en el perfil de elevación
+    if (climbs && climbs.length > 0) {
+        climbs.forEach(climb => {
+            const isPuerto = climb.type === "Puerto";
+            const color = isPuerto ? "#e63946" : "#b5830d";
+            const labelId = isPuerto ? `P${pCount++}` : `R${rCount++}`;
+            const lengthKm = (climb.distance_m / 1000).toFixed(1);
+            const displayType = climb.display_type || climb.type;
+
+            const subDistances = [], subElevs = [], climbCustomData = [];
+            let runningDist = 0;
+
+            segments.forEach((s) => {
+                const segDist = s.distance_m / 1000;
+                const prevDist = runningDist;
+                runningDist += segDist;
+                const segElev = s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0;
+
+                if (runningDist >= climb.start_dist_km && prevDist <= climb.end_dist_km) {
+                    subDistances.push(runningDist);
+                    subElevs.push(segElev);
+                    climbCustomData.push([
+                        labelId,
+                        displayType,
+                        lengthKm,
+                        climb.elevation_gain_m.toFixed(0),
+                        climb.average_slope_percent.toFixed(1)
+                    ]);
                 }
             });
 
-            if (subD.length > 1) {
-                const maxE = Math.max(...subE), maxD = subD[subE.indexOf(maxE)];
-                annotations.push({ x: maxD, y: maxE, text: `<b>${labelId}</b>`, showarrow: true, arrowhead: 0, arrowcolor: color, ay: -22, font: { size: 10, color: "#ffffff" }, bgcolor: color });
+            if (subDistances.length > 1) {
+                const targetX = isPuerto ? puertoX : repechoX;
+                const targetY = isPuerto ? puertoY : repechoY;
+                const targetCustom = isPuerto ? puertoCustom : repechoCustom;
+
+                targetX.push(...subDistances, null);
+                targetY.push(...subElevs, null);
+                climbCustomData.forEach(cd => targetCustom.push(cd));
+                targetCustom.push(null);
+
+                let maxElev = Math.max(...subElevs);
+                let maxIdx = subElevs.indexOf(maxElev);
+                let maxDist = subDistances[maxIdx];
+
+                annotations.push({
+                    x: maxDist,
+                    y: maxElev,
+                    text: `<b>${labelId}</b>`,
+                    showarrow: true,
+                    arrowhead: 0,
+                    arrowwidth: 2,
+                    arrowcolor: color,
+                    ax: 0,
+                    ay: -22,
+                    font: { size: 10, color: "#ffffff", family: 'Space Mono, monospace', weight: 'bold' },
+                    bgcolor: color,
+                    borderpad: 3
+                });
             }
         });
+
+        if (repechoX.length > 0) {
+            traces.push({
+                x: repechoX,
+                y: repechoY,
+                customdata: repechoCustom,
+                mode: 'lines',
+                line: { color: '#b5830d', width: 5 },
+                showlegend: false,
+                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+            });
+        }
+
+        if (puertoX.length > 0) {
+            traces.push({
+                x: puertoX,
+                y: puertoY,
+                customdata: puertoCustom,
+                mode: 'lines',
+                line: { color: '#e63946', width: 5 },
+                showlegend: false,
+                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+            });
+        }
     }
 
     const layout = {
         ...getCommonLayout('PERFIL DE ELEVACIÓN Y PUERTOS'),
         xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', automargin: true },
         yaxis: { title: 'Altitud (m)', gridcolor: '#e5e1dc', automargin: true },
-        annotations: annotations
+        annotations: annotations,
+        legend: {
+            orientation: 'h',
+            yanchor: 'top',
+            y: -0.32,
+            xanchor: 'center',
+            x: 0.5,
+            font: { size: 10 }
+        }
     };
 
     renderPlotlyChart('chart-elevation', traces, layout);
