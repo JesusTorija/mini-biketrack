@@ -429,3 +429,48 @@ button[type="submit"]:hover, #btn-simulate:hover {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* --- Ajustes para el selector de rutas de ejemplo --- */
+.example-track-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap; /* Permite que el botón baje de línea en pantallas pequeñas si no cabe */
+    margin-top: 0.5rem;
+}
+
+.example-track-group select {
+    flex: 1 1 140px; /* Ancho flexible para adaptarse al contenedor */
+    min-width: 0;
+    padding: 0.5rem;
+    border: 2px solid #121212;
+    font-weight: 700;
+}
+
+.example-track-group button {
+    flex: 0 0 auto;
+    white-space: nowrap; /* Evita que el texto del botón se rompa torpemente */
+    padding: 0.5rem 0.8rem;
+    font-size: 0.75rem;
+}
+
+/* --- Ajustes Responsive para Pantallas Móviles (< 768px) --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem; /* Reduce márgenes laterales para ganar espacio horizontal */
+    }
+
+    .sidebar {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .metrics-grid {
+        grid-template-columns: 1fr; /* 1 sola columna de métricas en móviles */
+    }
+
+    /* Ocultar el botón tipo pestaña lateral en móvil si está cerrado o adaptar posición */
+    .sidebar.is-hidden {
+        padding: 0;
+        margin-bottom: 0;
+    }
+}

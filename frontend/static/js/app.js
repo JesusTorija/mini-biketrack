@@ -147,7 +147,20 @@ document.getElementById('sim-form').addEventListener('submit', async (e) => {
 });
 
 function renderDashboard(data) {
-    document.getElementById('results-wrapper').classList.remove('hidden');
+    const resultsWrapper = document.getElementById('results-wrapper');
+    resultsWrapper.classList.remove('hidden');
+
+    // --- 1. Ocultar el panel lateral automáticamente tras simular ---
+    const sidebar = document.getElementById('sidebar');
+    const toggleButton = document.getElementById('toggle-sidebar-btn');
+    if (sidebar && !sidebar.classList.contains('is-hidden')) {
+        sidebar.classList.add('is-hidden');
+        if (toggleButton) toggleButton.textContent = '▶';
+    }
+
+    // --- 2. Auto-scroll suave hacia la zona de resultados ---
+    resultsWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     const sim = data.simulation;
     const summary = data.summary;
     const real = data.real_telemetry_metrics;
