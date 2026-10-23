@@ -473,4 +473,12 @@ button[type="submit"]:hover, #btn-simulate:hover {
         padding: 0;
         margin-bottom: 0;
     }
+
+    .js-plotly-plot .plotly .modebar {
+        top: 2px !important;
+        right: 2px !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        border-radius: 4px;
+        padding: 2px;
+    }
 }
