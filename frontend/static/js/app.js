@@ -15,6 +15,8 @@ function getCommonLayout(titleText, customMargin = {}) {
         plot_bgcolor: '#fcfbfa',
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
         margin: { l: mobile ? 40 : 50, r: mobile ? 20 : 40, t: mobile ? 55 : 40, b: mobile ? 40 : 50, ...customMargin },
+        height: mobile ? 300 : 360,
+        autosize: true,
         hovermode: 'x unified'
     };
 }
@@ -26,7 +28,9 @@ function renderPlotlyChart(containerId, traces, layout) {
 function resizeAllCharts() {
     ['chart-map', 'chart-elevation', 'chart-combined', 'chart-fatigue', 'chart-wprime'].forEach(id => {
         const el = document.getElementById(id);
-        if (el && el.data) Plotly.Plots.resize(el);
+        if (el && el.data && typeof Plotly !== 'undefined') {
+            Plotly.Plots.resize(el);
+        }
     });
 }
 
@@ -40,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleButton.addEventListener('click', () => {
             sidebar.classList.toggle('is-hidden');
             toggleButton.textContent = sidebar.classList.contains('is-hidden') ? '▶' : '◀';
-            setTimeout(resizeAllCharts, 300);
+            setTimeout(resizeAllCharts, 350);
         });
     }
     window.addEventListener('resize', resizeAllCharts);
@@ -196,7 +200,10 @@ function renderDashboard(data) {
     
     updateAllChartsSync(0);
     setupChartClickEvents();
-    setTimeout(resizeAllCharts, 300);
+
+    // Refresco doble asegurado para recalcular tras la transición CSS del sidebar
+    setTimeout(resizeAllCharts, 100);
+    setTimeout(resizeAllCharts, 400);
 }
 
 // --- DIBUJO DE GRÁFICOS ---

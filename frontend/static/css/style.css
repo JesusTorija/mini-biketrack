@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BAUHAUS & EUROPEAN MODERNISM (Saul Bass / Swiss Style) - HORS CATÉGORIE
+   BAUHAUS & EUROPEAN MODERNISM - HORS CATÉGORIE
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
@@ -12,13 +12,14 @@
 }
 
 body {
-    background-color: #f4f1ea; /* Papel pergamino / crema modernista */
+    background-color: #f4f1ea;
     color: #121212;
     overflow-x: hidden;
     width: 100vw;
-    border-top: 10px solid #e63946; /* Toque Bauhaus Rojo */
+    border-top: 10px solid #e63946;
 }
 
+/* --- HEADER --- */
 header {
     background-color: #121212;
     color: #f4f1ea;
@@ -34,51 +35,61 @@ header h1 {
     font-weight: 900;
     letter-spacing: -1px;
     text-transform: uppercase;
-    color: #ffb703; /* Amarillo Bauhaus */
+    color: #ffb703;
 }
 
 header p {
     font-size: 0.85rem;
     font-family: 'Space Mono', monospace;
-    color: #f4f1ea;
     letter-spacing: 1px;
     text-transform: uppercase;
     opacity: 0.85;
 }
 
-/* Estilo para el logo en el header */
 .header-logo {
-    width: 60px; /* Tamaño profesional */
+    width: 60px;
     height: 60px;
-    object-fit: contain; /* Garantiza que no se deforme */
-    display: block;
+    object-fit: contain;
     transition: transform 0.2s ease;
 }
 
 .header-logo:hover {
-    transform: rotate(5deg); /* Toque lúdico ciclista sutil */
+    transform: rotate(5deg);
 }
 
+/* --- LAYOUT PRINCIPAL --- */
 .container {
     display: flex;
     gap: 2rem;
     padding: 2.5rem;
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box;
 }
 
-/* Barra lateral estructurada */
+.content {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* --- COMPONENTES BASE (TARJETAS ESTILO BAUHAUS) --- */
+.sidebar, .metric-card, .sync-panel, .chart-box, .card-section.summary-table-card {
+    background-color: #ffffff;
+    border: 3px solid #121212;
+    box-shadow: 4px 4px 0px #121212;
+    border-radius: 0;
+}
+
+/* --- BARRA LATERAL --- */
 .sidebar {
     width: 350px;
-    background-color: #ffffff;
     padding: 1.5rem;
-    border: 3px solid #121212;
-    box-shadow: 6px 6px 0px #121212;
     flex-shrink: 0;
     height: fit-content;
     position: relative;
-    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-color 0.35s ease;
 }
 
 .sidebar-content {
@@ -87,7 +98,6 @@ header p {
     overflow: hidden;
 }
 
-/* Botón discreto tipo pestaña con flecha */
 .sidebar-toggle-btn {
     position: absolute;
     top: 12px;
@@ -106,7 +116,7 @@ header p {
     font-weight: 900;
     z-index: 10;
     box-shadow: 3px 3px 0px rgba(0,0,0,0.15);
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .sidebar-toggle-btn:hover {
@@ -114,7 +124,6 @@ header p {
     color: #ffffff;
 }
 
-/* Estado contraído del panel lateral */
 .sidebar.is-hidden {
     width: 0;
     min-width: 0;
@@ -129,22 +138,17 @@ header p {
     display: none;
 }
 
-.sidebar.is-hidden .sidebar-toggle-btn {
-    right: -28px;
-    border: 2px solid #121212;
-}
-
-.sidebar h2 {
+.sidebar h2, .card-section.summary-table-card h3 {
     font-size: 1.1rem;
     font-weight: 900;
     text-transform: uppercase;
     margin-bottom: 1.2rem;
-    color: #121212;
     border-bottom: 3px solid #121212;
     padding-bottom: 0.5rem;
     letter-spacing: 0.5px;
 }
 
+/* --- FORMULARIOS --- */
 fieldset {
     border: 2px solid #121212;
     background-color: #fcfbfa;
@@ -172,7 +176,6 @@ legend {
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #121212;
     margin-bottom: 0.3rem;
 }
 
@@ -184,7 +187,6 @@ legend {
     font-family: 'Space Mono', monospace;
     font-weight: 700;
     font-size: 0.9rem;
-    border-radius: 0;
 }
 
 .form-group input:focus {
@@ -214,14 +216,7 @@ button[type="submit"]:hover, #btn-simulate:hover {
     box-shadow: 6px 6px 0px #121212;
 }
 
-.content {
-    flex-grow: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
+/* --- MÉTRICAS --- */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -229,13 +224,8 @@ button[type="submit"]:hover, #btn-simulate:hover {
 }
 
 .metric-card {
-    background-color: #ffffff;
-    border: 3px solid #121212;
     padding: 1.2rem;
-    box-shadow: 4px 4px 0px #121212;
-    text-align: left;
     position: relative;
-    border-radius: 0;
 }
 
 .metric-card::before {
@@ -245,7 +235,7 @@ button[type="submit"]:hover, #btn-simulate:hover {
     left: 0;
     width: 6px;
     height: 100%;
-    background-color: #ffb703; /* Acento geométrico amarillo */
+    background-color: #ffb703;
 }
 
 .metric-card h3 {
@@ -254,14 +244,12 @@ button[type="submit"]:hover, #btn-simulate:hover {
     text-transform: uppercase;
     color: #495057;
     margin-bottom: 0.5rem;
-    letter-spacing: 0.5px;
 }
 
 .metric-card p {
     font-size: 1.5rem;
     font-weight: 900;
     font-family: 'Space Mono', monospace;
-    color: #121212;
 }
 
 .sub-real {
@@ -273,21 +261,17 @@ button[type="submit"]:hover, #btn-simulate:hover {
     margin-top: 0.3rem;
 }
 
+/* --- PANEL DE SINCRONIZACIÓN Y GRÁFICOS --- */
 .sync-panel {
-    background-color: #ffffff;
-    border: 3px solid #121212;
     padding: 1.2rem;
-    box-shadow: 4px 4px 0px #121212;
-    border-radius: 0;
 }
 
 .sync-panel label {
     font-size: 0.85rem;
     font-weight: 900;
     text-transform: uppercase;
-    color: #121212;
+    display: block;
     margin-bottom: 0.8rem;
-    letter-spacing: 0.5px;
 }
 
 .sync-panel input[type="range"] {
@@ -300,56 +284,41 @@ button[type="submit"]:hover, #btn-simulate:hover {
 .detail-box {
     font-size: 0.85rem;
     font-family: 'Space Mono', monospace;
-    color: #121212;
     background-color: #f4f1ea;
     padding: 0.8rem;
     border: 2px solid #121212;
-    border-radius: 0;
 }
 
 .row-charts {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
-    width: 100%;
 }
 
+/* Estilo y dimensiones explícitas para contenedores de Plotly */
 .chart-box {
-    background-color: #ffffff;
-    border: 3px solid #121212;
-    border-radius: 0;
     padding: 0.8rem;
     width: 100%;
     min-width: 0;
+    min-height: 360px;
     overflow: hidden;
-    box-shadow: 4px 4px 0px #121212;
-    box-sizing: border-box;
 }
 
-.chart-box.wide {
-    width: 100%;
+/* Asegurar que los divs internos de Plotly ocupen el 100% del contenedor */
+.chart-box .js-plotly-plot,
+.chart-box .plot-container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 340px;
 }
 
 .hidden {
     display: none;
 }
 
-/* Tablas de Puertos con Estética Tipográfica */
+/* --- TABLAS Y ETIQUETAS DE PUERTOS --- */
 .card-section.summary-table-card {
-    background-color: #ffffff;
-    border: 3px solid #121212;
     padding: 1.5rem;
-    box-shadow: 4px 4px 0px #121212;
-}
-
-.card-section.summary-table-card h3 {
-    font-size: 1.1rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    letter-spacing: 0.5px;
-    border-bottom: 3px solid #121212;
-    padding-bottom: 0.5rem;
 }
 
 .styled-table {
@@ -377,7 +346,6 @@ button[type="submit"]:hover, #btn-simulate:hover {
     font-size: 0.8rem;
 }
 
-/* Estilo unificado para la etiqueta principal (R1, P3, etc.) */
 .badge-puerto, .badge-repecho {
     display: inline-block;
     font-weight: 900;
@@ -385,29 +353,19 @@ button[type="submit"]:hover, #btn-simulate:hover {
     font-size: 0.85rem;
     padding: 2px 6px;
     border-radius: 3px;
-    width: fit-content;
-}
-
-.badge-puerto {
     color: #ffffff;
-    background-color: #e63946; /* Fondo rojo fuerte solo para la etiqueta de puerto */
-    border: 1px solid #e63946;
 }
 
-.badge-repecho {
-    color: #ffffff;
-    background-color: #b5830d; /* Fondo ocre/amarillo fuerte solo para la etiqueta de repecho */
-    border: 1px solid #b5830d;
-}
+.badge-puerto { background-color: #e63946; }
+.badge-repecho { background-color: #b5830d; }
 
-/* Estilo para el subtipo ("Puerto" / "Repecho") en gris y pequeño debajo */
 .badge-subtipo {
-    font-family: 'Montserrat', sans-serif;
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #6c757d; /* Gris discreto */
-    letter-spacing: 0.5px;
+    color: #6c757d;
+    display: block;
+    margin-top: 2px;
 }
 
 .col-real {
@@ -415,31 +373,16 @@ button[type="submit"]:hover, #btn-simulate:hover {
     font-weight: 700;
 }
 
-@media (max-width: 1300px) {
-    .container {
-        flex-direction: column;
-    }
-    .sidebar {
-        width: 100%;
-    }
-    .row-charts {
-        grid-template-columns: 1fr;
-    }
-    .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* --- Ajustes para el selector de rutas de ejemplo --- */
+/* --- SELECTOR DE RUTAS DE EJEMPLO --- */
 .example-track-group {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: wrap; /* Permite que el botón baje de línea en pantallas pequeñas si no cabe */
+    flex-wrap: wrap;
     margin-top: 0.5rem;
 }
 
 .example-track-group select {
-    flex: 1 1 140px; /* Ancho flexible para adaptarse al contenedor */
+    flex: 1 1 140px;
     min-width: 0;
     padding: 0.5rem;
     border: 2px solid #121212;
@@ -448,27 +391,33 @@ button[type="submit"]:hover, #btn-simulate:hover {
 
 .example-track-group button {
     flex: 0 0 auto;
-    white-space: nowrap; /* Evita que el texto del botón se rompa torpemente */
+    white-space: nowrap;
     padding: 0.5rem 0.8rem;
     font-size: 0.75rem;
 }
 
-/* --- Ajustes Responsive para Pantallas Móviles (< 768px) --- */
+/* --- RESPONSIVE MEDIA QUERIES --- */
+@media (max-width: 1300px) {
+    .container { flex-direction: column; }
+    .sidebar { width: 100%; }
+    .row-charts { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
-    .container {
-        padding: 1rem; /* Reduce márgenes laterales para ganar espacio horizontal */
+    .container { padding: 1rem; }
+    .sidebar { width: 100%; box-sizing: border-box; }
+    .metrics-grid { grid-template-columns: 1fr; }
+
+    .chart-box {
+        min-height: 300px;
     }
 
-    .sidebar {
-        width: 100%;
-        box-sizing: border-box;
+    .chart-box .js-plotly-plot,
+    .chart-box .plot-container {
+        min-height: 280px;
     }
 
-    .metrics-grid {
-        grid-template-columns: 1fr; /* 1 sola columna de métricas en móviles */
-    }
-
-    /* Ocultar el botón tipo pestaña lateral en móvil si está cerrado o adaptar posición */
     .sidebar.is-hidden {
         padding: 0;
         margin-bottom: 0;
