@@ -21,159 +21,169 @@
 <body>
     <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
         <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <!-- LOGO HC -->
-            <img src="/static/img/logo6.png" alt="Hors Catégorie Cycling Analytics Logo" class="header-logo">
+            <img src="/static/img/logo6.png" alt="Logo" class="header-logo">
             <div>
-                <h1>Hors Catégorie</h1>
-                <p>Simulador de Física Ciclista & Análisis Telemétrico Avanzado</p>
+                <h1 data-i18n="title">Hors Catégorie</h1>
+                <p data-i18n="headerSubtitle">Simulador de Física Ciclista & Análisis Telemétrico Avanzado</p>
             </div>
+        </div>
+        
+        <!-- SELECTOR DE IDIOMA -->
+        <div>
+            <select id="language-selector" style="padding: 6px 12px; font-weight: bold; border-radius: 4px; background: #fff; color: #121212; cursor: pointer; border: 1px solid #ccc;">
+                <option value="es">🇪🇸 ES</option>
+                <option value="en">🇬🇧 EN</option>
+                <option value="fr">🇫🇷 FR</option>
+            </select>
         </div>
     </header>
 
-    <div class="container">
-        <!-- BARRA LATERAL DE CONFIGURACIÓN -->
-        <aside class="sidebar" id="sidebar">
-            <button id="toggle-sidebar-btn" class="sidebar-toggle-btn" type="button" title="Contraer / Expandir parámetros">
-                ◀
-            </button>
-            <div class="sidebar-content">
-                <h2>Parámetros de Simulación</h2>
-                <form id="sim-form">
+    
+<div class="container">
+    <!-- BARRA LATERAL DE CONFIGURACIÓN -->
+    <aside class="sidebar" id="sidebar">
+        <button id="toggle-sidebar-btn" class="sidebar-toggle-btn" type="button" title="Contraer / Expandir parámetros">
+            ◀
+        </button>
+        <div class="sidebar-content">
+            <h2 data-i18n="sidebarTitle">Parámetros de Simulación</h2>
+            <form id="sim-form">
+                <div class="form-group">
+                    <label for="route-file" data-i18n="fileLabel">Archivo de Ruta (.fit / .gpx):</label>
+                    <input type="file" id="route-file" accept=".fit,.gpx" required>
+                </div>
+
+                <div class="example-route-container" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    <label for="example-select" data-i18n="noFileYet" style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px; color: #333;">¿Sin archivo? Prueba un ejemplo:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="example-select" style="flex: 1; padding: 6px; font-size: 12px; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="" data-i18n="selectExample">-- Selecciona ruta de ejemplo --</option>
+                        </select>
+                        <button type="button" id="btn-load-example" data-i18n="loadExampleBtn" style="padding: 6px 12px; font-size: 12px; background: #1d3557; color: white; border: none; border-radius: 4px; cursor: pointer;">Cargar</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-simulate" data-i18n="simulateBtn">Simular Ruta</button>
+
+                <fieldset>
+                    <legend data-i18n="fs1">1. Ciclista y Fisiología</legend>
+                    <div class="form-group"><label data-i18n="lblWeightKg">Peso ciclista (kg):</label><input type="number" id="weight_kg" step="0.5"></div>
+                    <div class="form-group"><label data-i18n="lblBikeWeightKg">Peso bici (kg):</label><input type="number" id="bike_weight_kg" step="0.5"></div>
+                    <div class="form-group"><label data-i18n="lblFtpWatts">FTP (W):</label><input type="number" id="ftp_watts"></div>
+                    <div class="form-group"><label data-i18n="lblIntensityFactor">Factor Intensidad (IF):</label><input type="number" id="intensity_factor" step="0.01"></div>
+                    <div class="form-group"><label data-i18n="lblWPrimeKj">Capacidad W' (kJ):</label><input type="number" id="w_prime_kj" step="1.0"></div>
+                    <div class="form-group"><label data-i18n="lblFatigueRate">Fatiga por 1.000 kJ (%):</label><input type="number" id="fatigue_rate_per_1000kj" step="0.1"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend data-i18n="fs2">2. Aerodinámica y Resistencia</legend>
+                    <div class="form-group"><label data-i18n="lblCdaSeated">CdA Sentado:</label><input type="number" id="cda_seated" step="0.01"></div>
+                    <div class="form-group"><label data-i18n="lblCdaStanding">CdA De pie:</label><input type="number" id="cda_standing" step="0.01"></div>
+                    <div class="form-group"><label data-i18n="lblRollingResistance">Coef. Rodadura (Cr):</label><input type="number" id="rolling_resistance_cr" step="0.0005"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend data-i18n="fs3">3. Estrategia de Potencia</legend>
+                    <div class="form-group"><label data-i18n="lblClimbThreshold">Pendiente mín. subida (%):</label><input type="number" id="climb_gradient_threshold" step="0.5"></div>
+                    <div class="form-group"><label data-i18n="lblDescentThreshold">Pendiente mín. bajada (%):</label><input type="number" id="descent_gradient_threshold" step="0.5"></div>
+                    <div class="form-group"><label data-i18n="lblDescentPower">Vatios bajada pronunciada (W):</label><input type="number" id="descent_power_watts" step="5"></div>
+                    <div class="form-group"><label data-i18n="lblFalseFlatPower">Factor potencia falso llano:</label><input type="number" id="false_flat_power_factor" step="0.05"></div>
+                    <div class="form-group"><label data-i18n="lblExhaustedPower">Multiplicador W' agotada:</label><input type="number" id="exhausted_power_multiplier" step="0.05"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend data-i18n="fs4">4. Control de Descensos y Límites</legend>
+                    <div class="form-group"><label data-i18n="lblMaxDescentSpeed">Velocidad máx. descenso (km/h):</label><input type="number" id="max_descent_speed_kmh" step="5"></div>
+                    <div class="form-group"><label data-i18n="lblBrakingFactor">Factor de frenado (Curvas):</label><input type="number" id="descent_braking_factor" step="0.01"></div>
+                    <div class="form-group"><label data-i18n="lblBrakingThreshold">Umbral inicio frenado (km/h):</label><input type="number" id="braking_speed_threshold_kmh" step="5"></div>
+                    <div class="form-group"><label data-i18n="lblTechDescentDamping">Amortiguación bajada técnica:</label><input type="number" id="technical_descent_damping" step="0.05"></div>
+                </fieldset>
+
+                <fieldset>
+                    <legend data-i18n="fs5">5. Parámetros de Suavizado de Ruta</legend>
                     <div class="form-group">
-                        <label for="route-file">Archivo de Ruta (.fit / .gpx):</label>
-                        <input type="file" id="route-file" accept=".fit,.gpx" required>
+                        <label for="smooth_radius_1" data-i18n="lblSmoothRadius1">Radio Suavizado 1 (m):</label>
+                        <input type="number" id="smooth_radius_1" step="10" min="0">
                     </div>
-
-                    <div class="example-route-container" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                        <label for="example-select" style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">¿Sin archivo? Prueba un ejemplo:</label>
-                        <div style="display: flex; gap: 8px;">
-                            <select id="example-select" style="flex: 1; padding: 6px; font-size: 12px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="">-- Selecciona ruta de ejemplo --</option>
-                            </select>
-                            <button type="button" id="btn-load-example" style="padding: 6px 12px; font-size: 12px; background: #1d3557; color: white; border: none; border-radius: 4px; cursor: pointer;">Cargar</button>
-                        </div>
+                    <div class="form-group">
+                        <label for="smooth_radius_2" data-i18n="lblSmoothRadius2">Radio Suavizado 2 (m):</label>
+                        <input type="number" id="smooth_radius_2" step="10" min="0">
                     </div>
+                </fieldset>
+            </form>
+        </div>
+    </aside>
 
-                    <button type="submit" id="btn-simulate">Simular Ruta</button>
-
-                    <fieldset>
-                        <legend>1. Ciclista y Fisiología</legend>
-                        <div class="form-group"><label>Peso ciclista (kg):</label><input type="number" id="weight_kg" step="0.5"></div>
-                        <div class="form-group"><label>Peso bici (kg):</label><input type="number" id="bike_weight_kg" step="0.5"></div>
-                        <div class="form-group"><label>FTP (W):</label><input type="number" id="ftp_watts"></div>
-                        <div class="form-group"><label>Factor Intensidad (IF):</label><input type="number" id="intensity_factor" step="0.01"></div>
-                        <div class="form-group"><label>Capacidad W' (kJ):</label><input type="number" id="w_prime_kj" step="1.0"></div>
-                        <div class="form-group"><label>Fatiga por 1.000 kJ (%):</label><input type="number" id="fatigue_rate_per_1000kj" step="0.1"></div>
-                    </fieldset>
-
-                    <fieldset>
-                        <legend>2. Aerodinámica y Resistencia</legend>
-                        <div class="form-group"><label>CdA Sentado:</label><input type="number" id="cda_seated" step="0.01"></div>
-                        <div class="form-group"><label>CdA De pie:</label><input type="number" id="cda_standing" step="0.01"></div>
-                        <div class="form-group"><label>Coef. Rodadura (Cr):</label><input type="number" id="rolling_resistance_cr" step="0.0005"></div>
-                    </fieldset>
-
-                    <fieldset>
-                        <legend>3. Estrategia de Potencia</legend>
-                        <div class="form-group"><label>Pendiente mín. subida (%):</label><input type="number" id="climb_gradient_threshold" step="0.5"></div>
-                        <div class="form-group"><label>Pendiente mín. bajada (%):</label><input type="number" id="descent_gradient_threshold" step="0.5"></div>
-                        <div class="form-group"><label>Vatios bajada pronunciada (W):</label><input type="number" id="descent_power_watts" step="5"></div>
-                        <div class="form-group"><label>Factor potencia falso llano:</label><input type="number" id="false_flat_power_factor" step="0.05"></div>
-                        <div class="form-group"><label>Multiplicador W' agotada:</label><input type="number" id="exhausted_power_multiplier" step="0.05"></div>
-                    </fieldset>
-
-                    <fieldset>
-                        <legend>4. Control de Descensos y Límites</legend>
-                        <div class="form-group"><label>Velocidad máx. descenso (km/h):</label><input type="number" id="max_descent_speed_kmh" step="5"></div>
-                        <div class="form-group"><label>Factor de frenado (Curvas):</label><input type="number" id="descent_braking_factor" step="0.01"></div>
-                        <div class="form-group"><label>Umbral inicio frenado (km/h):</label><input type="number" id="braking_speed_threshold_kmh" step="5"></div>
-                        <div class="form-group"><label>Amortiguación bajada técnica:</label><input type="number" id="technical_descent_damping" step="0.05"></div>
-                    </fieldset>
-
-                    <fieldset>
-                        <legend>5. Parámetros de Suavizado de Ruta</legend>
-                        <div class="form-group">
-                            <label for="smooth_radius_1">Radio Suavizado 1 (m):</label>
-                            <input type="number" id="smooth_radius_1" step="10" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="smooth_radius_2">Radio Suavizado 2 (m):</label>
-                            <input type="number" id="smooth_radius_2" step="10" min="0">
-                        </div>
-                    </fieldset>
-                </form>
+    <!-- PANEL PRINCIPAL -->
+    <main class="content">
+        <div id="results-wrapper" class="hidden">
+            
+            <!-- MÉTRICAS RESUMEN -->
+            <div class="metrics-grid">
+                <div class="metric-card"><h3 data-i18n="metricTime">Tiempo Total</h3><p id="m-time">--</p><span id="m-time-real" class="sub-real"></span></div>
+                <div class="metric-card"><h3 data-i18n="metricDist">Distancia</h3><p id="m-dist">--</p></div>
+                <div class="metric-card"><h3 data-i18n="metricSpeed">Velocidad Media</h3><p id="m-speed">--</p><span id="m-speed-real" class="sub-real"></span></div>
+                <div class="metric-card"><h3 data-i18n="metricElev">Desnivel Positivo</h3><p id="m-elev">--</p></div>
             </div>
-        </aside>
-
-        <!-- PANEL PRINCIPAL -->
-        <main class="content">
-            <div id="results-wrapper" class="hidden">
-                
-                <!-- MÉTRICAS RESUMEN -->
-                <div class="metrics-grid">
-                    <div class="metric-card"><h3>Tiempo Total</h3><p id="m-time">--</p><span id="m-time-real" class="sub-real"></span></div>
-                    <div class="metric-card"><h3>Distancia</h3><p id="m-dist">--</p></div>
-                    <div class="metric-card"><h3>Velocidad Media</h3><p id="m-speed">--</p><span id="m-speed-real" class="sub-real"></span></div>
-                    <div class="metric-card"><h3>Desnivel Positivo</h3><p id="m-elev">--</p></div>
-                </div>
-                <div class="metrics-grid">
-                    <div class="metric-card"><h3>Potencia Media</h3><p id="m-power">--</p><span id="m-power-real" class="sub-real"></span></div>
-                    <div class="metric-card"><h3>Potencia Normalizada (NP)</h3><p id="m-np">--</p></div>
-                    <div class="metric-card"><h3>Energía Total</h3><p id="m-energy">--</p><span id="m-energy-real" class="sub-real"></span></div>
-                    <div class="metric-card"><h3>Carga (TSS)</h3><p id="m-tss">--</p></div>
-                </div>
-
-                <!-- SINCRONIZADOR MAESTRO POR KILÓMETRO -->
-                <div class="sync-panel">
-                    <label for="km-slider"><strong>Selector de Kilómetro (Sincronizador maestro):</strong> <span id="lbl-km">0.00</span> km</label>
-                    <input type="range" id="km-slider" min="0" max="100" value="0" step="0.1">
-                    <div id="km-detail-box" class="detail-box">
-                        Sube una ruta y simula para ver el detalle por kilómetro.
-                    </div>
-                </div>
-
-                <!-- MAPA Y PERFIL DE ELEVACIÓN -->
-                <div class="row-charts">
-                    <div id="chart-map" class="chart-box"></div>
-                    <div id="chart-elevation" class="chart-box"></div>
-                </div>
-
-                <!-- Sección de Resumen Comparativo de Puertos y Tramos -->
-                <div class="card-section summary-table-card">
-                    <h3>Resumen Comparativo: Puertos y Tramos (Simulado vs Real)</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="comparison-table" class="styled-table">
-                            <thead>
-                                <tr>
-                                    <th>Puerto / Tramo</th>
-                                    <th>Inicio (km)</th>
-                                    <th>Distancia</th>
-                                    <th>Desnivel</th>
-                                    <th>Pendiente</th>
-                                    <th>Tiempo Sim.</th>
-                                    <th>Tiempo Real</th>
-                                    <th>Vel. Sim.</th>
-                                    <th>Vel. Real</th>
-                                    <th>Pot. Sim.</th>
-                                    <th>Pot. Real</th>
-                                </tr>
-                            </thead>
-                            <tbody id="comparison-table-body">
-                                <tr><td colspan="11" style="text-align: center; padding: 15px; color: #6c757d;">Cargue una ruta para ver el resumen de puertos.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- GRÁFICAS DE RENDIMIENTO AVANZADAS -->
-                <div id="chart-combined" class="chart-box wide"></div>
-                <div id="chart-fatigue" class="chart-box wide"></div>
-                <div id="chart-wprime" class="chart-box wide"></div>
-
+            <div class="metrics-grid">
+                <div class="metric-card"><h3 data-i18n="metricPower">Potencia Media</h3><p id="m-power">--</p><span id="m-power-real" class="sub-real"></span></div>
+                <div class="metric-card"><h3 data-i18n="metricNP">Potencia Normalizada (NP)</h3><p id="m-np">--</p></div>
+                <div class="metric-card"><h3 data-i18n="metricEnergy">Energía Total</h3><p id="m-energy">--</p><span id="m-energy-real" class="sub-real"></span></div>
+                <div class="metric-card"><h3 data-i18n="metricTSS">Carga (TSS)</h3><p id="m-tss">--</p></div>
             </div>
-        </main>
-    </div>
 
-    <script src="/static/js/app.js?v=2.1"></script>
+            <!-- SINCRONIZADOR MAESTRO POR KILÓMETRO -->
+            <div class="sync-panel">
+                <label for="km-slider"><strong data-i18n="syncLabel">Selector de Kilómetro (Sincronizador maestro):</strong> <span id="lbl-km">0.00</span> km</label>
+                <input type="range" id="km-slider" min="0" max="100" value="0" step="0.1">
+                <div id="km-detail-box" class="detail-box" data-i18n="syncDefault">
+                    Sube una ruta y simula para ver el detalle por kilómetro.
+                </div>
+            </div>
+
+            <!-- MAPA Y PERFIL DE ELEVACIÓN -->
+            <div class="row-charts">
+                <div id="chart-map" class="chart-box"></div>
+                <div id="chart-elevation" class="chart-box"></div>
+            </div>
+
+            <!-- Sección de Resumen Comparativo de Puertos y Tramos -->
+            <div class="card-section summary-table-card">
+                <h3 data-i18n="tableTitle">Resumen Comparativo: Puertos y Tramos (Simulado vs Real)</h3>
+                <div style="overflow-x: auto;">
+                    <table id="comparison-table" class="styled-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="thRoute">Puerto / Tramo</th>
+                                <th data-i18n="thStart">Inicio (km)</th>
+                                <th data-i18n="thDist">Distancia</th>
+                                <th data-i18n="thElev">Desnivel</th>
+                                <th data-i18n="thSlope">Pendiente</th>
+                                <th data-i18n="thSimTime">Tiempo Sim.</th>
+                                <th data-i18n="thRealTime">Tiempo Real</th>
+                                <th data-i18n="thSimSpeed">Vel. Sim.</th>
+                                <th data-i18n="thRealSpeed">Vel. Real</th>
+                                <th data-i18n="thSimPower">Pot. Sim.</th>
+                                <th data-i18n="thRealPower">Pot. Real</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparison-table-body">
+                            <tr><td colspan="11" style="text-align: center; padding: 15px; color: #6c757d;" data-i18n="tableEmpty">Cargue una ruta para ver el resumen de puertos.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- GRÁFICAS DE RENDIMIENTO AVANZADAS -->
+            <div id="chart-combined" class="chart-box wide"></div>
+            <div id="chart-fatigue" class="chart-box wide"></div>
+            <div id="chart-wprime" class="chart-box wide"></div>
+
+        </div>
+    </main>
+</div>
+
+    <script src="/static/js/i18n.js?v=1.0"></script>
+    <script src="/static/js/app.js?v=2.2"></script>
 </body>
 </html>

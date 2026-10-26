@@ -2,8 +2,19 @@ const API_URL = "/api/v1/simulate";
 const CONFIG_API_URL = "/api/config";
 let simulationDataCache = null;
 
-// Inicialización global al cargar la página
+
+
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    const langSelector = document.getElementById('language-selector');
+    if (langSelector) {
+        langSelector.value = currentLang;
+        langSelector.addEventListener('change', (e) => setLanguage(e.target.value));
+    }
+    setLanguage(currentLang);
+
     loadInitialConfig();
 
     const toggleButton = document.getElementById('toggle-sidebar-btn');
@@ -12,11 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleButton && sidebar) {
         toggleButton.addEventListener('click', () => {
             sidebar.classList.toggle('is-hidden');
-            if (sidebar.classList.contains('is-hidden')) {
-                toggleButton.textContent = '▶';
-            } else {
-                toggleButton.textContent = '◀';
-            }
+            toggleButton.textContent = sidebar.classList.contains('is-hidden') ? '▶' : '◀';
         });
     }
 
@@ -61,7 +68,7 @@ async function loadInitialConfig() {
         if (config.smooth_radius_2 !== undefined) setInputValue('smooth_radius_2', config.smooth_radius_2);
 
     } catch (error) {
-        console.warn('No se pudieron cargar los valores predeterminados de la configuración:', error);
+        console.warn('Error al cargar la configuración inicial:', error);
     }
 }
 
@@ -75,10 +82,10 @@ function setInputValue(id, val) {
 document.getElementById('sim-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById('route-file');
-    if (!fileInput.files[0]) return alert("Selecciona un archivo .fit o .gpx");
+    if (!fileInput.files[0]) return alert(t('alertNoFile'));
 
     const btn = document.getElementById('btn-simulate');
-    btn.innerText = "Simulando física...";
+    btn.innerText = t('btnSimulating');
     btn.disabled = true;
 
     const configData = {
@@ -121,18 +128,17 @@ document.getElementById('sim-form').addEventListener('submit', async (e) => {
         
         simulationDataCache = await response.json();
 
-        // Procesar y categorizar los puertos según el desnivel
         if (simulationDataCache.simulation && simulationDataCache.simulation.detected_climbs) {
             simulationDataCache.simulation.detected_climbs = simulationDataCache.simulation.detected_climbs.map(climb => {
-                let cat = climb.type;
+                let catKey = "repecho";
                 if (climb.type === "Puerto") {
                     const gain = climb.elevation_gain_m || 0;
-                    if (gain <= 300) cat = "Puerto 3ª";
-                    else if (gain <= 600) cat = "Puerto 2ª";
-                    else if (gain <= 1000) cat = "Puerto 1ª";
-                    else cat = "Hors Catégorie";
+                    if (gain <= 300) catKey = "puerto3";
+                    else if (gain <= 600) catKey = "puerto2";
+                    else if (gain <= 1000) catKey = "puerto1";
+                    else catKey = "horsCat";
                 }
-                return { ...climb, display_type: cat };
+                return { ...climb, climb_key: catKey };
             });
         }
 
@@ -141,7 +147,7 @@ document.getElementById('sim-form').addEventListener('submit', async (e) => {
     } catch (err) {
         alert(`Error: ${err.message}`);
     } finally {
-        btn.innerText = "Simular Ruta";
+        btn.innerText = t('btnSimulate');
         btn.disabled = false;
     }
 });
@@ -150,7 +156,6 @@ function renderDashboard(data) {
     const resultsWrapper = document.getElementById('results-wrapper');
     resultsWrapper.classList.remove('hidden');
 
-    // --- 1. Ocultar el panel lateral automáticamente tras simular ---
     const sidebar = document.getElementById('sidebar');
     const toggleButton = document.getElementById('toggle-sidebar-btn');
     if (sidebar && !sidebar.classList.contains('is-hidden')) {
@@ -158,7 +163,6 @@ function renderDashboard(data) {
         if (toggleButton) toggleButton.textContent = '▶';
     }
 
-    // --- 2. Auto-scroll suave hacia la zona de resultados ---
     resultsWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const sim = data.simulation;
@@ -166,7 +170,6 @@ function renderDashboard(data) {
     const real = data.real_telemetry_metrics;
     const segments = sim.segments_simulation;
 
-    // Métricas simuladas
     document.getElementById('m-time').innerText = sim.formatted_time || "--:--:--";
     document.getElementById('m-dist').innerText = `${summary.total_distance_km.toFixed(2)} km`;
     document.getElementById('m-speed').innerText = `${sim.average_speed_kmh.toFixed(1)} km/h`;
@@ -179,22 +182,22 @@ function renderDashboard(data) {
     document.getElementById('m-energy').innerText = `${Math.round(totalKj)} kJ`;
     document.getElementById('m-tss').innerText = `${Math.round(sim.tss || 0)}`;
 
-    // Métricas reales
+    const rLbl = t('realLabel');
     if (real) {
-        document.getElementById('m-time-real').innerText = `Real: ${real.formatted_time || '--:--:--'}`;
-        document.getElementById('m-speed-real').innerText = `Real: ${real.average_speed_kmh} km/h`;
-        document.getElementById('m-power-real').innerText = `Real: ${real.average_power_watts} W`;
-        document.getElementById('m-energy-real').innerText = `Real: ${real.total_energy_kj} kJ`;
+        document.getElementById('m-time-real').innerText = `${rLbl}: ${real.formatted_time || '--:--:--'}`;
+        document.getElementById('m-speed-real').innerText = `${rLbl}: ${real.average_speed_kmh} km/h`;
+        document.getElementById('m-power-real').innerText = `${rLbl}: ${real.average_power_watts} W`;
+        document.getElementById('m-energy-real').innerText = `${rLbl}: ${real.total_energy_kj} kJ`;
         
         if (real.tss !== undefined) {
             const tssCard = document.getElementById('m-tss');
-            tssCard.innerHTML = `${Math.round(sim.tss || 0)} <span class="sub-real">Real: ${Math.round(real.tss)}</span>`;
+            tssCard.innerHTML = `${Math.round(sim.tss || 0)} <span class="sub-real">${rLbl}: ${Math.round(real.tss)}</span>`;
         }
     } else {
-        document.getElementById('m-time-real').innerText = `Real: --`;
-        document.getElementById('m-speed-real').innerText = `Real: --`;
-        document.getElementById('m-power-real').innerText = `Real: --`;
-        document.getElementById('m-energy-real').innerText = `Real: --`;
+        document.getElementById('m-time-real').innerText = `${rLbl}: --`;
+        document.getElementById('m-speed-real').innerText = `${rLbl}: --`;
+        document.getElementById('m-power-real').innerText = `${rLbl}: --`;
+        document.getElementById('m-energy-real').innerText = `${rLbl}: --`;
     }
 
     const slider = document.getElementById('km-slider');
@@ -240,11 +243,11 @@ function updateAllChartsSync(km) {
     });
 
     document.getElementById('km-detail-box').innerHTML = `
-        <strong>Detalle en el KM ${km.toFixed(2)}</strong> &nbsp;|&nbsp; 
-        Tiempo: <strong>${closestSeg.time_formatted || '00:00'}</strong> &nbsp;|&nbsp; 
-        Potencia: <strong>${closestSeg.power_watts.toFixed(1)} W</strong> &nbsp;|&nbsp; 
-        Velocidad: <strong>${closestSeg.speed_kmh.toFixed(1)} km/h</strong> &nbsp;|&nbsp; 
-        Pendiente: <strong>${closestSeg.gradient_percent.toFixed(1)}%</strong> &nbsp;|&nbsp; 
+        <strong>${t('detailKm')} ${km.toFixed(2)}</strong> &nbsp;|&nbsp; 
+        ${t('time')}: <strong>${closestSeg.time_formatted || '00:00'}</strong> &nbsp;|&nbsp; 
+        ${t('power')}: <strong>${closestSeg.power_watts.toFixed(1)} W</strong> &nbsp;|&nbsp; 
+        ${t('speed')}: <strong>${closestSeg.speed_kmh.toFixed(1)} km/h</strong> &nbsp;|&nbsp; 
+        ${t('slope')}: <strong>${closestSeg.gradient_percent.toFixed(1)}%</strong> &nbsp;|&nbsp; 
         W': <strong>${closestSeg.w_prime_percent.toFixed(1)}%</strong>
     `;
 
@@ -327,12 +330,7 @@ function plotMap(points, segments, climbs) {
             distAcc += haversine(points[idx-1].latitude, points[idx-1].longitude, points[idx].latitude, points[idx].longitude) / 1000;
         }
         dists.push(distAcc);
-        
-        let grad = 0;
-        if (segments[idx] && segments[idx].gradient_percent !== undefined) {
-            grad = segments[idx].gradient_percent;
-        }
-        gradients.push(grad);
+        gradients.push(segments[idx] ? segments[idx].gradient_percent || 0 : 0);
     });
 
     const traceRoute = {
@@ -341,8 +339,8 @@ function plotMap(points, segments, climbs) {
         customdata: dists.map((d, i) => [d, elevs[i], gradients[i]]),
         mode: 'lines',
         line: { width: 3.5, color: '#1d3557' },
-        name: 'Ruta General',
-        hovertemplate: '<b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>'
+        name: t('routeGeneral'),
+        hovertemplate: `<b>KM:</b> %{customdata[0]:.2f} km<br><b>${t('elevationYAxis')}:</b> %{customdata[1]:.1f} m<br><b>${t('slope')}:</b> %{customdata[2]:.1f}%<extra></extra>`
     };
 
     const traces = [traceRoute];
@@ -377,7 +375,7 @@ function plotMap(points, segments, climbs) {
                     mode: 'lines',
                     line: { width: 5, color: color },
                     name: displayType,
-                    hovertemplate: `<b>${displayType}</b><br><b>KM:</b> %{customdata[0]:.2f} km<br><b>Altitud:</b> %{customdata[1]:.1f} m<br><b>Pendiente:</b> %{customdata[2]:.1f}%<extra></extra>`
+                    hovertemplate: `<b>${displayType}</b><br><b>KM:</b> %{customdata[0]:.2f} km<br><b>${t('elevationYAxis')}:</b> %{customdata[1]:.1f} m<br><b>${t('slope')}:</b> %{customdata[2]:.1f}%<extra></extra>`
                 });
             }
         });
@@ -388,18 +386,18 @@ function plotMap(points, segments, climbs) {
         y: [points[0].latitude],
         mode: 'markers',
         marker: { size: 12, color: '#e63946', symbol: 'circle', line: { width: 2, color: '#121212' } },
-        name: 'Posición',
+        name: t('positionMarker'),
         hoverinfo: 'skip'
     };
     traces.push(traceMarker);
 
     const layout = {
-        title: { text: 'MAPA DE LA RUTA', font: { size: 13, weight: 900 } },
+        title: { text: t('mapTitle'), font: { size: 13, weight: 900 } },
         paper_bgcolor: '#ffffff',
         plot_bgcolor: '#fcfbfa',
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
-        xaxis: { title: 'Longitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        yaxis: { title: 'Latitud', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', scaleanchor: 'x', automargin: true },
+        xaxis: { title: t('mapAxisLon'), gridcolor: '#e5e1dc', automargin: true },
+        yaxis: { title: t('mapAxisLat'), gridcolor: '#e5e1dc', scaleanchor: 'x', automargin: true },
         margin: { l: 50, r: 40, t: 40, b: 50 },
         height: 380,
         hovermode: 'closest',
@@ -413,7 +411,6 @@ function plotElevation(segments, summary, climbs) {
     let distAcc = 0;
     const distances = [0], gradients = [segments.length > 0 ? segments[0].gradient_percent : 0];
 
-    // Construir el perfil general usando la altitud absoluta real desde origen
     const elevations = segments.map(s => s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0);
     if (segments.length > 0 && segments[0].absolute_elevation_m !== undefined) {
         elevations.unshift(segments[0].absolute_elevation_m - segments[0].elevation_change_m);
@@ -434,8 +431,8 @@ function plotElevation(segments, summary, climbs) {
         fill: 'tozeroy',
         fillcolor: 'rgba(29, 53, 87, 0.08)',
         line: { color: '#1d3557', width: 2.5 },
-        name: 'Perfil General',
-        hovertemplate: '<b>KM:</b> %{x:.2f} km<br><b>Altitud:</b> %{y:.1f} m<br><b>Pendiente:</b> %{customdata:.1f}%<extra></extra>'
+        name: t('profileGeneral'),
+        hovertemplate: `<b>KM:</b> %{x:.2f} km<br><b>${t('elevationYAxis')}:</b> %{y:.1f} m<br><b>${t('slope')}:</b> %{customdata:.1f}%<extra></extra>`
     };
 
     const traces = [traceElev];
@@ -460,8 +457,6 @@ function plotElevation(segments, summary, climbs) {
                 const segDist = s.distance_m / 1000;
                 const prevDist = runningDist;
                 runningDist += segDist;
-                
-                // Usar la altitud absoluta real del segmento en lugar de acumular desde 0
                 const segElev = s.absolute_elevation_m !== undefined ? s.absolute_elevation_m : 0;
 
                 if (runningDist >= climb.start_dist_km && prevDist <= climb.end_dist_km) {
@@ -516,7 +511,7 @@ function plotElevation(segments, summary, climbs) {
                 mode: 'lines',
                 line: { color: '#b5830d', width: 5 },
                 showlegend: false,
-                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+                hovertemplate: `<b>[%{customdata[0]}] %{customdata[1]}</b><br>${t('thDist')}: %{customdata[2]} km<br>${t('thElev')}: %{customdata[3]} m<br>${t('thSlope')}: %{customdata[4]}%<extra></extra>`
             });
         }
 
@@ -528,34 +523,28 @@ function plotElevation(segments, summary, climbs) {
                 mode: 'lines',
                 line: { color: '#e63946', width: 5 },
                 showlegend: false,
-                hovertemplate: '<b>[%{customdata[0]}] %{customdata[1]}</b><br>Distancia: %{customdata[2]} km<br>Desnivel: %{customdata[3]} m<br>Pendiente Media: %{customdata[4]}%<extra></extra>'
+                hovertemplate: `<b>[%{customdata[0]}] %{customdata[1]}</b><br>${t('thDist')}: %{customdata[2]} km<br>${t('thElev')}: %{customdata[3]} m<br>${t('thSlope')}: %{customdata[4]}%<extra></extra>`
             });
         }
     }
 
     const layout = {
-        title: { text: 'PERFIL DE ELEVACIÓN Y PUERTOS', font: { size: 13, weight: 900 } },
+        title: { text: t('elevationTitle'), font: { size: 13, weight: 900 } },
         paper_bgcolor: '#ffffff',
         plot_bgcolor: '#fcfbfa',
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
-        xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        yaxis: { title: 'Altitud (m)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
+        xaxis: { title: t('elevationXAxis'), gridcolor: '#e5e1dc', automargin: true },
+        yaxis: { title: t('elevationYAxis'), gridcolor: '#e5e1dc', automargin: true },
         margin: { l: 50, r: 40, t: 40, b: 60 },
         height: 380,
         hovermode: 'x unified',
         annotations: annotations,
-        legend: {
-            orientation: 'h',
-            yanchor: 'top',
-            y: -0.32,
-            xanchor: 'center',
-            x: 0.5,
-            font: { size: 10 }
-        }
+        legend: { orientation: 'h', y: -0.32, x: 0.5, xanchor: 'center', font: { size: 10 } }
     };
 
     Plotly.newPlot('chart-elevation', traces, layout);
 }
+
 function plotCombined(segments, telemetry) {
     let distAcc = 0;
     const distances = [0];
@@ -601,7 +590,7 @@ function plotCombined(segments, telemetry) {
     const traceElevBg = {
         x: distances,
         y: elevations,
-        name: 'Perfil de Ruta',
+        name: t('profileGeneral'),
         fill: 'tozeroy',
         fillcolor: 'rgba(200, 200, 200, 0.1)',
         line: { color: 'rgba(150, 150, 150, 0.2)', width: 1 },
@@ -612,18 +601,18 @@ function plotCombined(segments, telemetry) {
     const tracePower = {
         x: distances.slice(1),
         y: simPower,
-        name: 'Potencia Simulada (W)',
+        name: t('simPowerTrace'),
         line: { color: '#b5830d', width: 2.5 },
-        hovertemplate: 'Potencia Sim.: %{y:.1f} W<extra></extra>'
+        hovertemplate: `${t('simPowerTrace')}: %{y:.1f} W<extra></extra>`
     };
 
     const traceSpeed = {
         x: distances.slice(1),
         y: simSpeed,
-        name: 'Velocidad Sim. (km/h)',
+        name: t('simSpeedTrace'),
         line: { color: '#1d3557', width: 2.5 },
         yaxis: 'y2',
-        hovertemplate: 'Velocidad Sim.: %{y:.1f} km/h<extra></extra>'
+        hovertemplate: `${t('simSpeedTrace')}: %{y:.1f} km/h<extra></extra>`
     };
 
     const traces = [traceElevBg, tracePower, traceSpeed];
@@ -684,65 +673,44 @@ function plotCombined(segments, telemetry) {
             let absSec = Math.abs(diffSec);
             let m = Math.floor(absSec / 60);
             let s = Math.floor(absSec % 60);
-            let diffStr = `${sign}${m}m ${s}s`;
-
-            timeDiffCustom.push(diffStr);
+            timeDiffCustom.push(`${sign}${m}m ${s}s`);
         }
 
         traces.push({
             x: telDist,
             y: telPower,
-            name: 'Potencia Real',
+            name: t('realPowerTrace'),
             line: { color: '#e63946', dash: 'dot', width: 2 },
             customdata: timeDiffCustom,
-            hovertemplate: 'Potencia Real: %{y:.1f} W<br>Desfase T: %{customdata}<extra></extra>'
+            hovertemplate: `${t('realPowerTrace')}: %{y:.1f} W<br>${t('timeLag')}: %{customdata}<extra></extra>`
         });
 
         traces.push({
             x: telDist,
             y: telSpeed,
-            name: 'Velocidad Real',
+            name: t('realSpeedTrace'),
             line: { color: '#457b9d', dash: 'dot', width: 2 },
             yaxis: 'y2',
             customdata: timeDiffCustom,
-            hovertemplate: 'Velocidad Real: %{y:.1f} km/h<br>Desfase T: %{customdata}<extra></extra>'
+            hovertemplate: `${t('realSpeedTrace')}: %{y:.1f} km/h<br>${t('timeLag')}: %{customdata}<extra></extra>`
         });
     }
 
     const maxElev = elevations.length > 0 ? Math.max(...elevations) : 500;
 
     const layout = {
-        title: {
-            text: 'DINÁMICA DE RUTA: POTENCIA, VELOCIDAD Y PERFIL',
-            font: { size: 13, weight: 900 }
-        },
+        title: { text: t('combinedTitle'), font: { size: 13, weight: 900 } },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
-        xaxis: { title: 'Distancia Acumulada (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        yaxis: { title: 'Potencia (W)', side: 'left', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true, zorder: 2 },
-        yaxis2: { title: 'Velocidad (km/h)', overlaying: 'y', side: 'right', showgrid: false, automargin: true, zorder: 2 },
-        yaxis3: {
-            title: '',
-            overlaying: 'y',
-            side: 'right',
-            showgrid: false,
-            zeroline: false,
-            showticklabels: false,
-            range: [0, maxElev * 3.5],
-            zorder: 1
-        },
+        xaxis: { title: t('elevationXAxis'), gridcolor: '#e5e1dc', automargin: true },
+        yaxis: { title: `${t('power')} (W)`, side: 'left', gridcolor: '#e5e1dc', automargin: true },
+        yaxis2: { title: `${t('speed')} (km/h)`, overlaying: 'y', side: 'right', showgrid: false, automargin: true },
+        yaxis3: { title: '', overlaying: 'y', side: 'right', showgrid: false, showticklabels: false, range: [0, maxElev * 3.5] },
         margin: { l: 60, r: 85, t: 85, b: 60 },
         height: 360, 
         hovermode: 'x unified',
-        legend: { 
-            orientation: 'h', 
-            yanchor: 'bottom', 
-            y: 1.05, 
-            xanchor: 'center', 
-            x: 0.5,
-            font: { size: 10 }
-        }
+        legend: { orientation: 'h', y: 1.05, x: 0.5, xanchor: 'center', font: { size: 10 } }
     };
     
     Plotly.newPlot('chart-combined', traces, layout);
@@ -754,17 +722,17 @@ function plotFatigue(segments) {
     const ftpEff = segments.map(s => s.effective_ftp_watts);
     const energy = segments.map(s => s.energy_kj_accumulated);
 
-    const traceFtp = { x: distances, y: ftpEff, name: 'FTP Efectivo (W)', line: { color: '#1d3557', width: 2.5 } };
-    const traceEnergy = { x: distances, y: energy, name: 'Energía (kJ)', line: { color: '#e63946', width: 2, dash: 'dot' }, yaxis: 'y2' };
+    const traceFtp = { x: distances, y: ftpEff, name: t('ftpTrace'), line: { color: '#1d3557', width: 2.5 } };
+    const traceEnergy = { x: distances, y: energy, name: t('energyTrace'), line: { color: '#e63946', width: 2, dash: 'dot' }, yaxis: 'y2' };
 
     const layout = {
-        title: { text: 'EVOLUCIÓN DE LA FATIGA: FTP EFECTIVO Y ENERGÍA', font: { size: 13, weight: 900 } },
+        title: { text: t('fatigueTitle'), font: { size: 13, weight: 900 } },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
-        xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        yaxis: { title: 'FTP Efectivo (W)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
-        yaxis2: { title: 'Energía (kJ)', overlaying: 'y', side: 'right', showgrid: false, automargin: true },
+        xaxis: { title: t('elevationXAxis'), gridcolor: '#e5e1dc', automargin: true },
+        yaxis: { title: t('ftpTrace'), gridcolor: '#e5e1dc', automargin: true },
+        yaxis2: { title: t('energyTrace'), overlaying: 'y', side: 'right', showgrid: false, automargin: true },
         margin: { l: 50, r: 75, t: 40, b: 50 },
         height: 300, 
         hovermode: 'x unified',
@@ -779,17 +747,17 @@ function plotWPrime(segments) {
     const wPrime = segments.map(s => s.w_prime_percent);
 
     const traceW = {
-        x: distances, y: wPrime, name: "W' Disponible (%)",
+        x: distances, y: wPrime, name: t('wprimeTitle'),
         fill: 'tozeroy', fillcolor: 'rgba(230, 57, 70, 0.1)', line: { color: '#e63946', width: 2.5 }
     };
 
     const layout = {
-        title: { text: "CAPACIDAD ANAERÓBICA: W' DISPONIBLE (%)", font: { size: 13, weight: 900 } },
+        title: { text: t('wprimeTitle'), font: { size: 13, weight: 900 } },
         paper_bgcolor: '#ffffff', 
         plot_bgcolor: '#fcfbfa', 
         font: { color: '#121212', family: 'Montserrat, sans-serif' },
-        xaxis: { title: 'Distancia (km)', gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true }, 
-        yaxis: { title: "W' (%)", range: [0, 105], gridcolor: '#e5e1dc', zerolinecolor: '#cccccc', automargin: true },
+        xaxis: { title: t('elevationXAxis'), gridcolor: '#e5e1dc', automargin: true }, 
+        yaxis: { title: "W' (%)", range: [0, 105], gridcolor: '#e5e1dc', automargin: true },
         margin: { l: 50, r: 40, t: 40, b: 50 },
         height: 280, 
         hovermode: 'x unified'
@@ -805,7 +773,7 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
     const climbs = simulationData.detected_climbs || [];
 
     if (climbs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 15px; color: #6c757d;">No se han detectado puertos o tramos significativos en esta ruta.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 15px; color: #6c757d;">${t('tableEmpty')}</td></tr>`;
         return;
     }
 
@@ -832,23 +800,19 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
         const h = Math.floor(sec / 3600);
         const m = Math.floor((sec % 3600) / 60);
         const s = Math.floor(sec % 60);
-        if (h > 0) {
-            return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-        }
+        if (h > 0) return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    let pCount = 1;
-    let rCount = 1;
+    let pCount = 1, rCount = 1;
 
     climbs.forEach((climb) => {
         const isPuerto = climb.type === "Puerto";
         const labelId = isPuerto ? `P${pCount++}` : `R${rCount++}`;
         const badgeClass = isPuerto ? "badge-puerto" : "badge-repecho";
         const climbDistKm = climb.distance_m / 1000.0;
-        const displayType = climb.display_type || climb.type;
+        const displayType = t(climb.climb_key || 'repecho');
 
-        // --- SIMULACIÓN ---
         const segmentsSim = simSegmentsWithDist.filter(s => {
             const distKm = s.accumulated_km || 0;
             return distKm >= climb.start_dist_km && distKm <= climb.end_dist_km;
@@ -863,7 +827,6 @@ function renderClimbsSummaryTable(simulationData, telemetryRecords) {
 
         let simSpeed = (simTimeSec > 0 && climbDistKm > 0) ? climbDistKm / (simTimeSec / 3600.0) : 0;
 
-        // --- REALIDAD ---
         let realSpeed = '--';
         let realPower = '--';
         let realTimeStr = '--:--';
@@ -939,7 +902,7 @@ async function loadExampleTracks() {
 document.getElementById('btn-load-example').addEventListener('click', async () => {
     const select = document.getElementById('example-select');
     const filename = select.value;
-    if (!filename) return alert("Por favor, selecciona una ruta de ejemplo.");
+    if (!filename) return alert(t('alertSelectExample'));
 
     try {
         const response = await fetch(`/tracks/${filename}`);
@@ -952,7 +915,7 @@ document.getElementById('btn-load-example').addEventListener('click', async () =
         dataTransfer.items.add(file);
         document.getElementById('route-file').files = dataTransfer.files;
 
-        alert(`¡Ruta '${filename}' cargada con éxito! Pulsa en 'Simular Ruta' para ver los resultados.`);
+        alert(t('alertExampleSuccess', { filename: filename }));
     } catch (err) {
         alert(`Error: ${err.message}`);
     }
